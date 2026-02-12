@@ -7,4 +7,4 @@ Reference --> https://github.com/simranjeet97/IPL2023_WinningPrediction_EDA_Dash
 4. Flask --> FastAPI
 5. Node Express Connection
 6. README.md Update
-7. New data Cleaning with new data  
+7. New data Cleaning with new data
