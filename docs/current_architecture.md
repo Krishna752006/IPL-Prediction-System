@@ -16,10 +16,6 @@ Post-prediction:
 Frontend → localhost:5173  
 Backend → localhost:5000  
 
-React → Flask → Encoder → Scaler → LSTM → Prediction  
-                 ↓  
-          Background retraining
-
 ## Performance Baseline
 
 Current prediction latency: ~2.7 seconds
@@ -49,3 +45,37 @@ Future iterations will decouple these layers to ensure:
 - Safer model updates
 - Improved system reliability
 - Production readiness
+
+## Frontend Routes (GET)
+
+:5173/ → Home  
+:5173/login  
+:5173/register  
+:5173/predictions  
+:5173/statistics  
+:5173/team-analysis
+
+## Backend Endpoint
+
+POST :5000/api/predict
+
+Consumes:
+- teamA
+- teamB
+- venue
+
+Returns:
+- predicted score
+- wickets
+- run_rate
+- match_result
+
+## Not implemented.
+
+System currently operates stateless:
+- No database
+- No session storage
+- No user persistence
+
+Login/Register exist only at UI level.
+No real authentication mechanism is implemented.
