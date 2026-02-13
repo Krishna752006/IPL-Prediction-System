@@ -17,7 +17,7 @@ Phase 3 — Platform Engineering
 
 Phase 4 — Advanced Capabilities
 - Sequential match simulator (research track)
-- Scenario engine
+- Scenario engine (LSTM / RNN)
 - LLM-powered analytics interface
 
 Phase 5 — Production Polish

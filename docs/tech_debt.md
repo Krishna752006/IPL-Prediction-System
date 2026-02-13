@@ -9,3 +9,4 @@
 - No logging
 - No CI/CD
 - Neural architecture selected before baseline validation (now corrected)
+- API handling inference + training violates separation of concerns.

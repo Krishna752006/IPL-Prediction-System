@@ -13,6 +13,26 @@ Post-prediction:
 - Background thread retrains model
 - Model overwritten
 
+Frontend → localhost:5173  
+Backend → localhost:5000  
+
+React → Flask → Encoder → Scaler → LSTM → Prediction  
+                 ↓  
+          Background retraining
+
+## Performance Baseline
+
+Current prediction latency: ~2.7 seconds
+
+Observed via browser network tab during local testing.
+
+Notes:
+- Latency includes preprocessing + model inference.
+- Background retraining is triggered asynchronously after response.
+- No optimization has been applied yet.
+
+Target latency (future): < 1 second
+
 ## Known Problems
 - Training occurs inside API
 - No model versioning

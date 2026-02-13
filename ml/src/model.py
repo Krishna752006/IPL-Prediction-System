@@ -20,8 +20,8 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}},
      allow_headers=['Content-Type', 'Authorization', 'Access-Control-Allow-Headers'], 
      methods=['GET', 'POST', 'OPTIONS'])
 
-data = pd.read_csv("data1.csv")
-#data.drop(['Unnamed: 0'], axis=1, inplace=True)
+data = pd.read_csv("../data/data1.csv")
+data.drop(['Unnamed: 0'], axis=1, inplace=True)
 
 input_features = ['batting_team', 'bowling_team', 'venue']
 encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
@@ -35,7 +35,7 @@ yfeats = ['runs', 'wickets']
 scalery = StandardScaler()
 scaled_y = scalery.fit_transform(data[yfeats])
 
-model = keras.models.load_model("lstm1.keras")
+model = keras.models.load_model("../models/lstm1.keras")
 
 team = {1: 'Chennai Super Kings', 2: 'Delhi Capitals', 3: 'Gujarat Titans', 5: 'Kolkata Knight Riders', 6: 'Lucknow Super Giants', 7: 'Mumbai Indians', 9: 'Punjab Kings', 10: 'Rajasthan Royals', 12: 'Royal Challengers Bengaluru', 13: 'Sunrisers Hyderabad'}
 venue = {1: 'Arun Jaitley Stadium', 3: 'Barsapara Cricket Stadium', 7: 'Dr DY Patil Sports Academy', 10: 'Eden Gardens', 11: 'Ekana Cricket Stadium', 12: 'Feroz Shah Kotla', 18: 'M Chinnaswamy Stadium', 19: 'MA Chidambaram Stadium', 20: 'Maharaja Yadavindra Singh International Cricket Stadium', 22: 'Narendra Modi Stadium', 27: 'Punjab Cricket Association IS Bindra Stadium', 28: 'Punjab Cricket Association Stadium', 29: 'Rajiv Gandhi International Stadium', 30: 'Sardar Patel Stadium', 31: 'Saurashtra Cricket Association Stadium', 32: 'Sawai Mansingh Stadium', 35: 'Sheikh Zayed Stadium', 37: 'Subrata Roy Sahara Stadium', 39: 'Vidarbha Cricket Association Stadium', 40: 'Wankhede Stadium'}

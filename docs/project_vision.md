@@ -18,4 +18,4 @@ Deploy as a scalable ML-backed web product.
 
 The platform will prioritize gradient-boosted models for production predictions due to their strong performance on structured tabular data.
 
-Neural architectures will be explored selectively for advanced simulation capabilities rather than baseline outcome prediction.
+Neural architectures will be explored selectively for advanced simulation capabilities rather than baseline outcome prediction i.e. for high tiers plans.

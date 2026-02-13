@@ -60,20 +60,31 @@ Targets:
 
 ---
 
-## Baseline Result
+## Baseline Results
 
-| Model | R² |
-|------|------|
-| XGBoost | **0.786** |
-| Random Forest | 0.746 |
-| Linear Regression | 0.735 |
-| Decision Tree | 0.738 |
-| LSTM | ~0.745 |
+| Model | MSE | MAE | RMSE | R² | Adjusted R² |
+|------|------|------|------|------|------|
+| XGBoost | 119.35 | 5.97 | 10.92 | **0.786** | 0.785 |
+| Random Forest | 149.05 | 6.67 | 12.21 | 0.746 | 0.745 |
+| Decision Tree | 151.64 | 6.59 | 12.31 | 0.738 | 0.738 |
+| Linear Regression | 147.40 | 6.72 | 12.14 | 0.735 | 0.734 |
+| LSTM | ~0.25* | ~0.36* | ~0.50* | ~0.745 | — |
 
 ### Key Insight
 The problem currently behaves as a **tabular regression task**, not a sequential one.
 
 Production direction will favor gradient boosting unless a true sequential simulator is built.
+
+---
+
+### Interpretation
+
+- XGBoost achieves the lowest prediction error across all major metrics.
+- Tree ensembles outperform both linear and neural approaches on the current feature space.
+- The LSTM’s metrics are not directly comparable due to target scaling, but it does not demonstrate a structural advantage.
+
+**Conclusion:**  
+Performance gains are more likely to come from improved feature engineering and dataset quality than increased model complexity.
 
 ---
 
