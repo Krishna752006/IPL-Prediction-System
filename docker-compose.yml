@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "3000:3000"
+    depends_on:
+      - ml-service
+
+  ml-service:
+    build: ./ml-service
+    ports:
+      - "5001:5000"
+
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
