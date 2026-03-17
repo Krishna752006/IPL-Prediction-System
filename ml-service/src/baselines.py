@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import math
+import time
 
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
@@ -53,13 +54,26 @@ X_train, X_val, y_train, y_val = train_test_split(
 # -----------------------------
 # EVALUATION FUNCTION
 # -----------------------------
+
 def evaluate_model(name, model, X_train, y_train, X_test, y_test, scalery):
 
     model.fit(X_train, y_train)
 
+    # -----------------------------
+    # LATENCY MEASUREMENT
+    # -----------------------------
+    start_time = time.time()
+
     y_pred = model.predict(X_test)
 
-    # inverse scaling to get REAL cricket values
+    end_time = time.time()
+
+    total_latency_ms = (end_time - start_time) * 1000
+    avg_latency_per_sample = total_latency_ms / X_test.shape[0]
+
+    # -----------------------------
+    # METRICS
+    # -----------------------------
     y_pred_real = scalery.inverse_transform(y_pred)
     y_test_real = scalery.inverse_transform(y_test)
 
@@ -79,7 +93,9 @@ def evaluate_model(name, model, X_train, y_train, X_test, y_test, scalery):
         "MAE": mae,
         "RMSE": rmse,
         "R2": r2,
-        "Adjusted_R2": adjusted_r2
+        "Adjusted_R2": adjusted_r2,
+        "Total_Latency_ms": total_latency_ms,
+        "Latency_per_sample_ms": avg_latency_per_sample
     }
 
 

@@ -1,10 +1,7 @@
-import os
-import warnings
+import pickle
 import numpy as np
 import pandas as pd
-import math
 from sklearn.metrics import r2_score
-import threading  
 import tensorflow as tf
 from tensorflow import keras
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -35,6 +32,15 @@ try:
         encoded_categorical = encoder.fit_transform(data[input_features])
         scaled_x = scalerx.fit_transform(data[xfeats])
         scaled_y = scalery.fit_transform(data[yfeats])
+
+        with open("../models/encoder.pkl", "wb") as f:
+            pickle.dump(encoder, f)
+
+        with open("../models/scalerx.pkl", "wb") as f:
+            pickle.dump(scalerx, f)
+
+        with open("../models/scalery.pkl", "wb") as f:
+            pickle.dump(scalery, f)
 
         X = np.hstack((encoded_categorical, scaled_x))
         X = X.reshape(X.shape[0], 1, X.shape[1])
