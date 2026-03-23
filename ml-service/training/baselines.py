@@ -3,10 +3,15 @@ import time
 
 import numpy as np
 import pandas as pd
+import tensorflow as tf
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.tree import DecisionTreeRegressor
+from tensorflow import keras
+from xgboost import XGBRegressor
 
 print("Started training baselines...")
 
@@ -46,7 +51,7 @@ X_train, X_val, y_train, y_val = train_test_split(
 
 
 # -----------------------------
-# EVALUATION FUNCTION
+# EVALUATION FUNCTION (sklearn)
 # -----------------------------
 def evaluate_model(name, model):
 
@@ -85,7 +90,100 @@ def evaluate_model(name, model):
 
 
 # -----------------------------
-# MODELS
+# RECURRENT MODEL CONFIG
+# -----------------------------
+LAYER1_UNITS = 100
+LAYER2_UNITS = 50
+DENSE1 = 10
+DENSE2 = 10
+
+# Reshape X for recurrent models: (samples, timesteps=1, features)
+X_train_seq = X_train.reshape((X_train.shape[0], 1, X_train.shape[1]))
+X_val_seq = X_val.reshape((X_val.shape[0], 1, X_val.shape[1]))
+X_test_seq = X_test.reshape((X_test.shape[0], 1, X_test.shape[1]))
+
+
+def get_recurrent_layer(model_type, units, return_sequences):
+    """Return the appropriate Keras recurrent layer."""
+    if model_type == "LSTM":
+        return keras.layers.LSTM(units, return_sequences=return_sequences)
+    elif model_type == "GRU":
+        return keras.layers.GRU(units, return_sequences=return_sequences)
+    elif model_type == "RNN":
+        return keras.layers.SimpleRNN(units, return_sequences=return_sequences)
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
+
+
+def build_recurrent_model(model_type):
+    """Build a two-layer recurrent model followed by dense layers."""
+    model = keras.Sequential(
+        [
+            keras.layers.Input(shape=(1, X_train.shape[1])),
+            get_recurrent_layer(model_type, LAYER1_UNITS, return_sequences=True),
+            get_recurrent_layer(model_type, LAYER2_UNITS, return_sequences=False),
+            keras.layers.Dense(DENSE1, activation="relu"),
+            keras.layers.Dense(DENSE2, activation="relu"),
+            keras.layers.Dense(2),
+        ]
+    )
+    model.compile(optimizer="adam", loss="mse")
+    return model
+
+
+def evaluate_recurrent_model(model_type):
+    """Train and evaluate a recurrent model, returning a metrics dict."""
+    print(f"  Training {model_type}...")
+    model = build_recurrent_model(model_type)
+
+    early_stop = keras.callbacks.EarlyStopping(
+        monitor="val_loss", patience=5, restore_best_weights=True
+    )
+
+    model.fit(
+        X_train_seq,
+        y_train,
+        validation_data=(X_val_seq, y_val),
+        epochs=10,
+        batch_size=1048,
+        callbacks=[early_stop],
+        verbose=0,
+    )
+
+    # latency
+    start_time = time.time()
+    y_pred = model.predict(X_test_seq, verbose=0)
+    end_time = time.time()
+
+    total_latency_ms = (end_time - start_time) * 1000
+    avg_latency = total_latency_ms / X_test_seq.shape[0]
+
+    # metrics (REAL SCALE)
+    y_pred_real = scalery.inverse_transform(y_pred)
+    y_test_real = scalery.inverse_transform(y_test)
+
+    mse = mean_squared_error(y_test_real, y_pred_real)
+    mae = mean_absolute_error(y_test_real, y_pred_real)
+    rmse = math.sqrt(mse)
+    r2 = r2_score(y_test_real, y_pred_real)
+
+    n = X_test_seq.shape[0]
+    p = X_test_seq.shape[1] * X_test_seq.shape[2]  # flattened feature count
+    adjusted_r2 = 1 - (1 - r2) * (n - 1) / (n - p - 1)
+
+    return {
+        "Model": model_type,
+        "RMSE": rmse,
+        "MAE": mae,
+        "R2": r2,
+        "Adj_R2": adjusted_r2,
+        "Latency(ms)": total_latency_ms,
+        "Per_Sample(ms)": avg_latency,
+    }
+
+
+# -----------------------------
+# SKLEARN MODELS
 # -----------------------------
 models = {
     "Linear Regression": LinearRegression(),
@@ -104,14 +202,20 @@ models = {
     ),
 }
 
-# -----------------------------
-# RUN
-# -----------------------------
 results = []
 
 for name, model in models.items():
     results.append(evaluate_model(name, model))
 
+# -----------------------------
+# RECURRENT MODELS
+# -----------------------------
+for rnn_type in ["LSTM", "GRU", "RNN"]:
+    results.append(evaluate_recurrent_model(rnn_type))
+
+# -----------------------------
+# LEADERBOARD
+# -----------------------------
 results_df = pd.DataFrame(results).sort_values(by="RMSE")
 
 print("\nMODEL LEADERBOARD:\n")

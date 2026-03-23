@@ -64,12 +64,31 @@ BATCH_SIZE = config["model"]["batch_size"]
 GATE_MAE = config["validation_gate"]["test_mae"]
 GATE_R2 = config["validation_gate"]["test_r2"]
 
-LSTM1_UNITS = config["model"]["lstm1_units"]
-LSTM2_UNITS = config["model"]["lstm2_units"]
+LAYER1_UNITS = config["model"]["lstm1_units"]
+LAYER2_UNITS = config["model"]["lstm2_units"]
 DENSE1 = config["model"]["dense1"]
 DENSE2 = config["model"]["dense2"]
 LEARNING_RATE = config["model"]["learning_rate"]
 MODEL_TYPE = config["model"]["type"]
+
+
+# -----------------------------
+# LAYER FACTORY
+# -----------------------------
+def get_recurrent_layer(model_type, units, return_sequences=False):
+    """Return the appropriate recurrent layer based on model_type in config."""
+    model_type = model_type.upper()
+    if model_type == "LSTM":
+        return keras.layers.LSTM(units, return_sequences=return_sequences)
+    elif model_type == "GRU":
+        return keras.layers.GRU(units, return_sequences=return_sequences)
+    elif model_type == "RNN":
+        return keras.layers.SimpleRNN(units, return_sequences=return_sequences)
+    else:
+        raise ValueError(
+            f"Unsupported model type '{model_type}'. Choose LSTM, GRU, or RNN."
+        )
+
 
 # -----------------------------
 # REPRODUCIBILITY
@@ -113,7 +132,7 @@ else:
 X = df.drop(columns=["y_runs", "y_wickets"]).values
 y = df[["y_runs", "y_wickets"]].values
 
-# reshape for LSTM
+# reshape for LSTM, RNN, GRU
 X = X.reshape(X.shape[0], 1, X.shape[1])
 
 # -----------------------------
@@ -139,8 +158,8 @@ with mlflow.start_run():
         mlflow.log_param("val_size", VAL_SIZE)
         mlflow.log_param("seed", SEED)
 
-        mlflow.log_param("lstm1_units", LSTM1_UNITS)
-        mlflow.log_param("lstm2_units", LSTM2_UNITS)
+        mlflow.log_param("layer1_units", LAYER1_UNITS)
+        mlflow.log_param("layer2_units", LAYER2_UNITS)
         mlflow.log_param("dense1", DENSE1)
         mlflow.log_param("dense2", DENSE2)
         mlflow.log_param("learning_rate", LEARNING_RATE)
@@ -169,15 +188,15 @@ with mlflow.start_run():
         # MODEL
         # -----------------------------
 
-        logger.info("Building LSTM model")
-        logger.info(f"LSTM1: {LSTM1_UNITS}, LSTM2: {LSTM2_UNITS}")
+        logger.info(f"Building {MODEL_TYPE} model")
+        logger.info(f"Layer1: {LAYER1_UNITS}, Layer2: {LAYER2_UNITS}")
         logger.info(f"Dense layers: {DENSE1}, {DENSE2}")
 
         model = keras.Sequential(
             [
                 keras.layers.Input(shape=(1, X.shape[2])),
-                keras.layers.LSTM(LSTM1_UNITS, return_sequences=True),
-                keras.layers.LSTM(LSTM2_UNITS),
+                get_recurrent_layer(MODEL_TYPE, LAYER1_UNITS, return_sequences=True),
+                get_recurrent_layer(MODEL_TYPE, LAYER2_UNITS, return_sequences=False),
                 keras.layers.Dense(DENSE1, activation="relu"),
                 keras.layers.Dense(DENSE2, activation="relu"),
                 keras.layers.Dense(2),
@@ -278,7 +297,7 @@ with mlflow.start_run():
         # -----------------------------
         # LOG TF MODEL
         # -----------------------------
-        mlflow.tensorflow.log_model(model, name="lstm_model")
+        mlflow.tensorflow.log_model(model, name=f"{MODEL_TYPE}_model")
 
         mlflow.log_artifact(save_path)
         mlflow.log_artifact(args.config)
