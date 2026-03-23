@@ -1,11 +1,11 @@
 import os
+
+import config
 import numpy as np
 import pandas as pd
-
-from ingest import load_data
 from features import build_features
+from ingest import load_data
 from split import split_data
-import config
 
 
 def run_pipeline():
@@ -14,10 +14,7 @@ def run_pipeline():
 
     # 2. Features
     X, y, encoder, scalerx, scalery = build_features(
-        df,
-        config.INPUT_FEATURES,
-        config.X_FEATS,
-        config.Y_FEATS
+        df, config.INPUT_FEATURES, config.X_FEATS, config.Y_FEATS
     )
 
     # 3. Split
@@ -27,8 +24,8 @@ def run_pipeline():
     os.makedirs(os.path.dirname(config.OUTPUT_PATH), exist_ok=True)
 
     df_out = pd.DataFrame(X)
-    df_out['y_runs'] = y[:, 0]
-    df_out['y_wickets'] = y[:, 1]
+    df_out["y_runs"] = y[:, 0]
+    df_out["y_wickets"] = y[:, 1]
 
     df_out.to_parquet(config.OUTPUT_PATH)
 

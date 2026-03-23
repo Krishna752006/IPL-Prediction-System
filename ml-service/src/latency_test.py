@@ -1,6 +1,7 @@
-import time
-import numpy as np
 import pickle
+import time
+
+import numpy as np
 from tensorflow import keras
 
 # Load model
@@ -23,20 +24,15 @@ input_data = {
     "bowling_team": "Chennai Super Kings",
     "venue": "Wankhede Stadium",
     "over": 10,
-    "ball": 3
+    "ball": 3,
 }
 
 # Convert to model format
-cat_input = [[
-    input_data["batting_team"],
-    input_data["bowling_team"],
-    input_data["venue"]
-]]
+cat_input = [
+    [input_data["batting_team"], input_data["bowling_team"], input_data["venue"]]
+]
 
-num_input = [[
-    input_data["over"],
-    input_data["ball"]
-]]
+num_input = [[input_data["over"], input_data["ball"]]]
 
 # Encode
 encoded_cat = encoder.transform(cat_input)

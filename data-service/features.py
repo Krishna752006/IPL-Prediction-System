@@ -1,8 +1,9 @@
 import numpy as np
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+
 def build_features(df, input_features, x_feats, y_feats):
-    encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+    encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
     scalerx = StandardScaler()
     scalery = StandardScaler()
 

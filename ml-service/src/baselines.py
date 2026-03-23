@@ -1,17 +1,15 @@
-import numpy as np
-import pandas as pd
 import math
 import time
 
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
+import numpy as np
+import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
-
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.tree import DecisionTreeRegressor
+from xgboost import XGBRegressor
 
 print("Started training...")
 
@@ -20,14 +18,14 @@ print("Started training...")
 # -----------------------------
 data = pd.read_csv("../data/data1.csv", index_col="Unnamed: 0")
 
-input_features = ['batting_team', 'bowling_team', 'venue']
-xfeats = ['over', 'ball']
-yfeats = ['runs', 'wickets']
+input_features = ["batting_team", "bowling_team", "venue"]
+xfeats = ["over", "ball"]
+yfeats = ["runs", "wickets"]
 
 # -----------------------------
 # ENCODE + SCALE
 # -----------------------------
-encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+encoder = OneHotEncoder(sparse_output=False, handle_unknown="ignore")
 encoded_categorical = encoder.fit_transform(data[input_features])
 
 scalerx = StandardScaler()
@@ -54,6 +52,7 @@ X_train, X_val, y_train, y_val = train_test_split(
 # -----------------------------
 # EVALUATION FUNCTION
 # -----------------------------
+
 
 def evaluate_model(name, model, X_train, y_train, X_test, y_test, scalery):
 
@@ -95,7 +94,7 @@ def evaluate_model(name, model, X_train, y_train, X_test, y_test, scalery):
         "R2": r2,
         "Adjusted_R2": adjusted_r2,
         "Total_Latency_ms": total_latency_ms,
-        "Latency_per_sample_ms": avg_latency_per_sample
+        "Latency_per_sample_ms": avg_latency_per_sample,
     }
 
 
@@ -104,19 +103,10 @@ def evaluate_model(name, model, X_train, y_train, X_test, y_test, scalery):
 # -----------------------------
 models = {
     "Linear Regression": LinearRegression(),
-
-    "Decision Tree": DecisionTreeRegressor(
-        max_depth=20,
-        random_state=42
-    ),
-
+    "Decision Tree": DecisionTreeRegressor(max_depth=20, random_state=42),
     "Random Forest": RandomForestRegressor(
-        n_estimators=200,
-        max_depth=12,
-        random_state=42,
-        n_jobs=-1
+        n_estimators=200, max_depth=12, random_state=42, n_jobs=-1
     ),
-
     "XGBoost": XGBRegressor(
         n_estimators=300,
         learning_rate=0.05,
@@ -124,8 +114,8 @@ models = {
         subsample=0.8,
         colsample_bytree=0.8,
         random_state=42,
-        n_jobs=-1
-    )
+        n_jobs=-1,
+    ),
 }
 
 # -----------------------------
@@ -134,12 +124,7 @@ models = {
 results = []
 
 for name, model in models.items():
-    result = evaluate_model(
-        name, model,
-        X_train, y_train,
-        X_test, y_test,
-        scalery
-    )
+    result = evaluate_model(name, model, X_train, y_train, X_test, y_test, scalery)
     results.append(result)
 
 # -----------------------------
