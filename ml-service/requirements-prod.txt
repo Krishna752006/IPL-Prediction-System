@@ -5,3 +5,5 @@ pandas
 scikit-learn
 xgboost
 requests
+pymongo
+certifi

@@ -24,6 +24,7 @@ services:
       - ./models:/app/models
     environment:
       - ENV=production
+      - MONGO_URI=mongodb+srv://vasireddylokesh3_db_user:JsMdMMr5j1w1VJdR@cluster0.don7c03.mongodb.net/?appName=Cluster0
     restart: unless-stopped
 
   mongo:
@@ -37,3 +38,20 @@ services:
 # named volume (persistent but controlled)
 volumes:
   mongo_data:
+
+
+
+  # docker compose up --build
+
+  #output:
+#   ml-service     | Uvicorn running on http://0.0.0.0:5000
+# api-gateway    | Server running on port 3000
+# mongo          | Waiting for connections on port 27017
+
+
+# Hit Endpoint
+# http://localhost:5001/db-check
+# Output:
+# {
+#   "db": "connected"
+# }

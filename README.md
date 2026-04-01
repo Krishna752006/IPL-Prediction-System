@@ -5,6 +5,8 @@ Project Based on Interview -->
 1. https://www.instagram.com/reel/DU5jBV3k2d-/
 2. https://www.instagram.com/p/DUx1P8miqmr
 
+pre-commit run --all-files
+
 mlflow ui --backend-store-uri sqlite:///experiments/mlruns.db --port 5000
 
 “I built a versioned ML artifact system with controlled promotion to production”
