@@ -272,8 +272,11 @@ def build_features():
     print("Run rate features...")
     TOTAL_BALLS = 120
 
-    balls["balls_bowled"] = balls.groupby(["matchId", "inning"])["legal_ball_1"].cumsum() - balls["legal_ball_1"]
-    
+    balls["balls_bowled"] = (
+        balls.groupby(["matchId", "inning"])["legal_ball_1"].cumsum()
+        - balls["legal_ball_1"]
+    )
+
     balls["balls_remaining"] = TOTAL_BALLS - balls["balls_bowled"]
 
     balls["overs_bowled"] = balls["balls_bowled"] / 6
@@ -359,7 +362,7 @@ def build_features():
     balls["last_2_balls_bowled"] /= 24
     balls["last_3_balls_bowled"] /= 24
     balls["rr_momentum"] /= 10
-    balls['rr_momentum'] = balls['rr_momentum'].clip(-2, 2)
+    balls["rr_momentum"] = balls["rr_momentum"].clip(-2, 2)
 
     print("Final shape:", balls.shape)
 

@@ -1,21 +1,25 @@
+import math
+
 import torch
 import torch.nn as nn
 
-import math
 
 class PositionalEncoding(nn.Module):
     def __init__(self, d_model, max_len=500):
         super().__init__()
         position = torch.arange(max_len).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model)
+        )
         pe = torch.zeros(1, max_len, d_model)
         pe[0, :, 0::2] = torch.sin(position * div_term)
         pe[0, :, 1::2] = torch.cos(position * div_term)
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, x):
-        x = x + self.pe[:, :x.size(1), :]
+        x = x + self.pe[:, : x.size(1), :]
         return x
+
 
 class TabTransformerLSTM(nn.Module):
 
@@ -70,9 +74,16 @@ class TabTransformerLSTM(nn.Module):
             padding_idx=0,
         )
 
-        self.match_state_embedding = nn.Embedding(num_match_states, state_embedding_dim, padding_idx=0)
+        self.match_state_embedding = nn.Embedding(
+            num_match_states, state_embedding_dim, padding_idx=0
+        )
 
-        categorical_dim = (player_embedding_dim * 3 + venue_embedding_dim + season_embedding_dim + state_embedding_dim)
+        categorical_dim = (
+            player_embedding_dim * 3
+            + venue_embedding_dim
+            + season_embedding_dim
+            + state_embedding_dim
+        )
 
         self.embedding_projection = nn.Linear(
             categorical_dim,
@@ -94,10 +105,7 @@ class TabTransformerLSTM(nn.Module):
         self.pos_encoder = PositionalEncoding(transformer_dim)
         self.numerical_norm = nn.LayerNorm(numerical_dim)
 
-        lstm_input_dim = (
-            transformer_dim
-            + numerical_dim
-        )
+        lstm_input_dim = transformer_dim + numerical_dim
 
         self.lstm = nn.LSTM(
             input_size=lstm_input_dim,
@@ -121,15 +129,12 @@ class TabTransformerLSTM(nn.Module):
                 256,
             ),
             nn.ReLU(),
-
             nn.Dropout(mlp_dropout),
-
             nn.Linear(
                 256,
                 128,
             ),
             nn.ReLU(),
-
             nn.Dropout(mlp_dropout),
         )
 
@@ -150,14 +155,11 @@ class TabTransformerLSTM(nn.Module):
             nn.Linear(32, 16),
             nn.ReLU(),
             nn.Dropout(mlp_dropout),
-            nn.Linear(16, 1)
+            nn.Linear(16, 1),
         )
 
         self.wide_head = nn.Sequential(
-            nn.Linear(128, 48),
-            nn.ReLU(),
-            nn.Dropout(mlp_dropout),
-            nn.Linear(48, 1)
+            nn.Linear(128, 48), nn.ReLU(), nn.Dropout(mlp_dropout), nn.Linear(48, 1)
         )
 
     def encode(self, numerical_features, categorical_features):
@@ -177,20 +179,33 @@ class TabTransformerLSTM(nn.Module):
         state_embed = self.match_state_embedding(match_state_ids)
 
         categorical_embeddings = torch.cat(
-            [batter_embed, non_striker_embed, bowler_embed, venue_embed, season_embed, state_embed],
+            [
+                batter_embed,
+                non_striker_embed,
+                bowler_embed,
+                venue_embed,
+                season_embed,
+                state_embed,
+            ],
             dim=-1,
         )
 
         projected = self.embedding_projection(categorical_embeddings)
         projected = self.pos_encoder(projected)
-        transformed = self.transformer(projected, src_key_padding_mask=pad_mask)   # learned categorical embedding
-        numerical_normed = self.numerical_norm(numerical_features)                 # learned numerical embedding
+        transformed = self.transformer(
+            projected, src_key_padding_mask=pad_mask
+        )  # learned categorical embedding
+        numerical_normed = self.numerical_norm(
+            numerical_features
+        )  # learned numerical embedding
 
         combined = torch.cat([transformed, numerical_normed], dim=-1)
         return transformed, numerical_normed, combined
 
     def forward(self, numerical_features, categorical_features):
-        transformed, numerical_normed, combined = self.encode(numerical_features, categorical_features)
+        transformed, numerical_normed, combined = self.encode(
+            numerical_features, categorical_features
+        )
 
         lstm_output, _ = self.lstm(combined)
         final_hidden_score = lstm_output[:, -1, :]

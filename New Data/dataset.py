@@ -31,10 +31,7 @@ class IPLDataset(Dataset):
             season_df = df[df["season"] == target_year].copy()
 
             unique_matches = (
-                season_df["matchId"]
-                .drop_duplicates()
-                .sort_values()
-                .tolist()
+                season_df["matchId"].drop_duplicates().sort_values().tolist()
             )
 
             split_idx = len(unique_matches) // 2
@@ -43,19 +40,13 @@ class IPLDataset(Dataset):
             test_matches = unique_matches[split_idx:]
 
             if mode == "val":
-                df = season_df[
-                    season_df["matchId"].isin(val_matches)
-                ].copy()
+                df = season_df[season_df["matchId"].isin(val_matches)].copy()
 
             else:
-                df = season_df[
-                    season_df["matchId"].isin(test_matches)
-                ].copy()
+                df = season_df[season_df["matchId"].isin(test_matches)].copy()
 
         else:
-            raise ValueError(
-                "mode must be one of ['train', 'val', 'test']"
-            )
+            raise ValueError("mode must be one of ['train', 'val', 'test']")
 
         self.df = df.copy()
 
@@ -176,7 +167,7 @@ class IPLDataset(Dataset):
         self.y_score = np.array(self.y_score, dtype=np.float32)
         self.y_wide = np.array(self.y_wide, dtype=np.float32)
         self.y_wicket = np.array(self.y_wicket, dtype=np.float32)
-    
+
         print("Dataset Built Successfully")
         print(f"Samples: {len(self.y_score)}")
         print(f"Sequence Length: {self.sequence_length}")

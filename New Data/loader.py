@@ -1,10 +1,9 @@
-from torch.utils.data import DataLoader
-import pandas as pd
-import torch
-
 import json
 
+import pandas as pd
+import torch
 from dataset import IPLDataset
+from torch.utils.data import DataLoader
 
 
 def build_dataloaders(
@@ -14,16 +13,22 @@ def build_dataloaders(
     target_year: int = 2025,
     num_workers: int = 0,
 ):
-    
+
     print("Loading parquet dataset...")
     df = pd.read_parquet(parquet_path)
     print(f"Loaded dataframe shape: {df.shape}")
 
-    with open("/kaggle/input/models/oneandonlyone/trying/pytorch/default/24/all_players.json", "r") as f:
+    with open(
+        "/kaggle/input/models/oneandonlyone/trying/pytorch/default/24/all_players.json",
+        "r",
+    ) as f:
         all_players = json.load(f)
         player_map = {player: idx + 1 for idx, player in enumerate(all_players)}
 
-    with open("/kaggle/input/models/oneandonlyone/trying/pytorch/default/24/all_venues.json", "r") as f:
+    with open(
+        "/kaggle/input/models/oneandonlyone/trying/pytorch/default/24/all_venues.json",
+        "r",
+    ) as f:
         all_venues = json.load(f)
         venue_map = {venue: idx + 1 for idx, venue in enumerate(all_venues)}
 

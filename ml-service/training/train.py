@@ -43,7 +43,9 @@ MLFLOW_DB = os.path.join(ML_SERVICE_DIR, config["paths"]["mlflow_db"])
 HISTORY_DIR = os.path.join(ML_SERVICE_DIR, "models", "history")
 
 # Resolve path to your custom Kaggle-generated embeddings JSON
-EMBEDDINGS_DIR = os.path.join(ML_SERVICE_DIR, config["paths"].get("embeddings_dir", "saved_seasons"))
+EMBEDDINGS_DIR = os.path.join(
+    ML_SERVICE_DIR, config["paths"].get("embeddings_dir", "saved_seasons")
+)
 
 os.makedirs(STAGING_DIR, exist_ok=True)
 os.makedirs(PRODUCTION_DIR, exist_ok=True)
@@ -105,21 +107,24 @@ tf.random.set_seed(SEED)
 mlflow.set_tracking_uri(f"sqlite:///{MLFLOW_DB}")
 mlflow.set_experiment(EXPERIMENT_NAME)
 
+
 # -----------------------------
 # HIGH-SPEED EMBEDDING PREPROCESSING LAYER
 # -----------------------------
 def transform_features_with_temporal_embeddings(df, embeddings_dir):
     """Maps raw categorical fields dynamically year-by-year to prevent data leakage."""
-    
-    logger.info(f"Dynamically loading temporal embeddings from {embeddings_dir} to prevent data leakage...")
-    
+
+    logger.info(
+        f"Dynamically loading temporal embeddings from {embeddings_dir} to prevent data leakage..."
+    )
+
     if not os.path.exists(embeddings_dir):
         raise FileNotFoundError(f"Embeddings directory missing: {embeddings_dir}")
 
     # Default dimensions established from your TabTransformer config
     p_dim, v_dim, s_dim, m_dim = 60, 30, 8, 8
     n_rows = len(df)
-    
+
     # Pre-allocate zero matrices to maintain exact row ordering
     b_vectors = np.zeros((n_rows, p_dim))
     ns_vectors = np.zeros((n_rows, p_dim))
@@ -127,68 +132,109 @@ def transform_features_with_temporal_embeddings(df, embeddings_dir):
     v_vectors = np.zeros((n_rows, v_dim))
     s_vectors = np.zeros((n_rows, s_dim))
     m_vectors = np.zeros((n_rows, m_dim))
-    
+
     # Iterate over each unique season in the dataset
     for season in sorted(df["season"].dropna().unique()):
         # The PyTorch script saves embeddings trained on data *prior* to target_year
         # So to predict season X, we load static_embeddings_X.json
         json_filename = f"static_embeddings_{int(season)}.json"
         json_path = os.path.join(embeddings_dir, json_filename)
-        
+
         # Create a boolean mask for rows belonging to this specific season
         mask = (df["season"] == season).values
         season_df = df[mask]
-        
+
         if not os.path.exists(json_path):
-            logger.warning(f"Embeddings for season {int(season)} not found at {json_path}. Using zero vectors.")
+            logger.warning(
+                f"Embeddings for season {int(season)} not found at {json_path}. Using zero vectors."
+            )
             continue
-            
-        logger.info(f"Applying {json_filename} to {mask.sum()} rows from the {int(season)} season.")
-        
+
+        logger.info(
+            f"Applying {json_filename} to {mask.sum()} rows from the {int(season)} season."
+        )
+
         with open(json_path, "r") as f:
             embeds = json.load(f)
-            
+
         # Fast mapping structures for this specific year
-        batter_map = {k: v["batter_embedding"] for k, v in embeds.get("players", {}).items()}
-        non_striker_map = {k: v["non_striker_embedding"] for k, v in embeds.get("players", {}).items()}
-        bowler_map = {k: v["bowler_embedding"] for k, v in embeds.get("players", {}).items()}
+        batter_map = {
+            k: v["batter_embedding"] for k, v in embeds.get("players", {}).items()
+        }
+        non_striker_map = {
+            k: v["non_striker_embedding"] for k, v in embeds.get("players", {}).items()
+        }
+        bowler_map = {
+            k: v["bowler_embedding"] for k, v in embeds.get("players", {}).items()
+        }
         venue_map = embeds.get("venues", {})
         season_map = embeds.get("season", {})
         match_state_list = embeds.get("match_state", [])
-        
-        def fetch_vec(mapping, keys, default_dim):
-            return np.array([mapping.get(str(k), [0.0]*default_dim) for k in keys])
-            
-        # Fill the allocated matrices only at the indices for this season
-        b_vectors[mask] = fetch_vec(batter_map, season_df.get("batsman", [None]*len(season_df)), p_dim)
-        ns_vectors[mask] = fetch_vec(non_striker_map, season_df.get("non_striker", [None]*len(season_df)), p_dim)
-        bw_vectors[mask] = fetch_vec(bowler_map, season_df.get("bowler", [None]*len(season_df)), p_dim)
-        v_vectors[mask] = fetch_vec(venue_map, season_df.get("venue", [None]*len(season_df)), v_dim)
-        s_vectors[mask] = fetch_vec(season_map, season_df.get("season", [None]*len(season_df)), s_dim)
-        
-        if "match_state_id" in season_df.columns:
-            m_vectors[mask] = np.array([
-                match_state_list[int(x)] if int(x) < len(match_state_list) else [0.0]*m_dim 
-                for x in season_df["match_state_id"]
-            ])
 
-    unwanted = ["current_score", "is_wicket_target", "isWide_target", "batsman", "non_striker", "bowler", "venue", "season", "match_state_id"]
+        def fetch_vec(mapping, keys, default_dim):
+            return np.array([mapping.get(str(k), [0.0] * default_dim) for k in keys])
+
+        # Fill the allocated matrices only at the indices for this season
+        b_vectors[mask] = fetch_vec(
+            batter_map, season_df.get("batsman", [None] * len(season_df)), p_dim
+        )
+        ns_vectors[mask] = fetch_vec(
+            non_striker_map,
+            season_df.get("non_striker", [None] * len(season_df)),
+            p_dim,
+        )
+        bw_vectors[mask] = fetch_vec(
+            bowler_map, season_df.get("bowler", [None] * len(season_df)), p_dim
+        )
+        v_vectors[mask] = fetch_vec(
+            venue_map, season_df.get("venue", [None] * len(season_df)), v_dim
+        )
+        s_vectors[mask] = fetch_vec(
+            season_map, season_df.get("season", [None] * len(season_df)), s_dim
+        )
+
+        if "match_state_id" in season_df.columns:
+            m_vectors[mask] = np.array(
+                [
+                    (
+                        match_state_list[int(x)]
+                        if int(x) < len(match_state_list)
+                        else [0.0] * m_dim
+                    )
+                    for x in season_df["match_state_id"]
+                ]
+            )
+
+    unwanted = [
+        "current_score",
+        "is_wicket_target",
+        "isWide_target",
+        "batsman",
+        "non_striker",
+        "bowler",
+        "venue",
+        "season",
+        "match_state_id",
+    ]
     drops = [col for col in unwanted if col in df.columns]
-    
+
     numerical_matrix = df.drop(columns=drops).select_dtypes(include=[np.number]).values
 
     # Glue spatial layers together into unified training payload
-    X_engineered = np.hstack([
-        numerical_matrix,
-        b_vectors,
-        ns_vectors,
-        bw_vectors,
-        v_vectors,
-        s_vectors,
-        m_vectors
-    ])
-    
+    X_engineered = np.hstack(
+        [
+            numerical_matrix,
+            b_vectors,
+            ns_vectors,
+            bw_vectors,
+            v_vectors,
+            s_vectors,
+            m_vectors,
+        ]
+    )
+
     return X_engineered
+
 
 # -----------------------------
 # LOAD DATA
@@ -244,7 +290,7 @@ with mlflow.start_run():
         mlflow.log_param("learning_rate", LEARNING_RATE)
 
         mlflow.log_param("config_file", args.config)
-        mlflow.log_artifact(EMBEDDINGS_DIR) # Track the underlying geometry version
+        mlflow.log_artifact(EMBEDDINGS_DIR)  # Track the underlying geometry version
 
         # -----------------------------
         # SPLIT
@@ -265,7 +311,9 @@ with mlflow.start_run():
         # -----------------------------
         # MODEL BUILDING
         # -----------------------------
-        logger.info(f"Building legacy light-weight structural {MODEL_TYPE} architecture")
+        logger.info(
+            f"Building legacy light-weight structural {MODEL_TYPE} architecture"
+        )
 
         model = keras.Sequential(
             [
@@ -306,7 +354,7 @@ with mlflow.start_run():
         )
 
         logger.info("Training completed")
-        
+
         # -----------------------------
         # SAVE BUNDLE
         # -----------------------------
@@ -329,6 +377,7 @@ with mlflow.start_run():
 
         with open(save_path, "wb") as f:
             import pickle
+
             pickle.dump(bundle, f)
 
         logger.info(f"Model saved to staging area: {save_path}")
@@ -408,7 +457,9 @@ with mlflow.start_run():
 
         if test_mae < GATE_MAE and test_r2 > GATE_R2:
             logger.info("✅ Model strictly cleared target metrics gate verification.")
-            logger.info("Promoting architectural deployment package to Production registry...")
+            logger.info(
+                "Promoting architectural deployment package to Production registry..."
+            )
 
             mlflow.set_tag("model_stage", "production")
             mlflow.set_tag("registry_status", "production")
@@ -428,7 +479,9 @@ with mlflow.start_run():
             )
             logger.info("Model verification promotion phase completed.")
         else:
-            logger.warning("⚠ Model parameters missed gate margins — deployment package preserved in Staging registry.")
+            logger.warning(
+                "⚠ Model parameters missed gate margins — deployment package preserved in Staging registry."
+            )
 
     except Exception as e:
         mlflow.set_tag("status", "failed")
