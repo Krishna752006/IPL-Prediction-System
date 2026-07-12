@@ -6,6 +6,8 @@ Project Based on Interview -->
 ~ 12.68x increase in data
 "Hybrid Sequential Multi-Task Cricket Prediction System"
 
+6+ hrs for training embeddings
+
 pre-commit run --all-files
 
 mlflow ui --backend-store-uri sqlite:///experiments/mlruns.db --port 5000

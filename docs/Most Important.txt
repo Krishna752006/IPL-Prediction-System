@@ -1,0 +1,24 @@
+-> Embedding train (TabTransformer + LSTM) --------------> DONE
+-> LSTM / Model
+-> ML System
+-> MLOps
+
+-> GitHub CI/CD
+-> ML Tests
+
+-> Flask to FastAPI
+-> REST API
+-> CORS
+-> JWT
+-> Auth0
+-> Role Based
+-> Payment Integration
+-> Rate Limitting
+-> Stats Page
+
+-> Docker
+-> HTTPS
+
+-> Docs
+-> Diagrams
+-> Demo

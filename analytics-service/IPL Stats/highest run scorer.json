@@ -1,0 +1,54 @@
+{
+  "highest_run_scorer_for_each_team": {
+    "CSK": {
+      "player": "MS Dhoni",
+      "runs": "4865",
+      "matches": "248"
+    },
+    "MI": {
+      "player": "Rohit Sharma",
+      "runs": "5876",
+      "matches": "227"
+    },
+    "RCB": {
+      "player": "Virat Kohli",
+      "runs": "8661",
+      "matches": "257"
+    },
+    "KKR": {
+      "player": "Gautam Gambhir",
+      "runs": "3345",
+      "matches": "108"
+    },
+    "DC": {
+      "player": "Rishabh Pant",
+      "runs": "3284",
+      "matches": "111"
+    },
+    "RR": {
+      "player": "Sanju Samson",
+      "runs": "3742",
+      "matches": "135"
+    },
+    "PBKS": {
+      "player": "KL Rahul",
+      "runs": "2548",
+      "matches": "55"
+    },
+    "SRH": {
+      "player": "David Warner",
+      "runs": "4014",
+      "matches": "95"
+    },
+    "GT": {
+      "player": "Shubman Gill",
+      "runs": "2449",
+      "matches": "60"
+    },
+    "LSG": {
+      "player": "KL Rahul",
+      "runs": "1410",
+      "matches": "38"
+    }
+  }
+}

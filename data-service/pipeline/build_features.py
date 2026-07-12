@@ -1,11 +1,17 @@
+import ast
 import json
 
 import numpy as np
 import pandas as pd
-from core.config import CLEAN_DELIVERIES_PATH, CLEAN_MATCHES_PATH, VERSION_DIR
-from core.metadata import save_metadata
+from config import CLEAN_DELIVERIES_PATH, CLEAN_MATCHES_PATH, VERSION_DIR
 
 FEATURES_PATH = VERSION_DIR / "features.parquet"
+
+from config import (
+    BATTER_FORM_PATH,
+    BOWLER_FORM_PATH,
+    VENUE_PHASE_AVG_PATH,
+)
 
 
 def build_features():
@@ -50,17 +56,6 @@ def build_features():
     print("Basic match features...")
     balls["legal_ball_1"] = (balls["isWide"] == 0) & (balls["isNoBall"] == 0)
 
-    TOTAL_BALLS = 120
-
-    balls["balls_bowled"] = (
-        balls.groupby(["matchId", "inning"])["legal_ball_1"]
-        .cumsum()
-        .groupby([balls["matchId"], balls["inning"]])
-        .shift(fill_value=0)
-    )
-
-    balls["balls_remaining"] = TOTAL_BALLS - balls["balls_bowled"]
-
     balls["over_number"] = balls["over"].astype(int) + 1
 
     balls["phase_pp"] = (balls["over_number"] <= 6).astype(int)
@@ -95,25 +90,6 @@ def build_features():
     balls["target"] = balls["matchId"].map(first_innings_score)
     balls.loc[balls["inning"] == 1, "target"] += 1
     balls.loc[balls["inning"] == 0, "target"] = 0
-
-    print("Over-level features...")
-    over_runs = (
-        balls.groupby(["matchId", "inning", "over_number"])["total_runs"]
-        .sum()
-        .reset_index(name="over_runs")
-    )
-
-    over_runs["last_over_runs"] = over_runs.groupby(["matchId", "inning"])[
-        "over_runs"
-    ].shift(1)
-
-    balls = balls.merge(
-        over_runs[["matchId", "inning", "over_number", "last_over_runs"]],
-        on=["matchId", "inning", "over_number"],
-        how="left",
-    )
-
-    balls["last_over_runs"] = balls["last_over_runs"].fillna(0).astype(int)
 
     balls["total_balls"] = balls.groupby(["matchId", "inning", "over"]).cumcount() + 1
 
@@ -176,35 +152,8 @@ def build_features():
     balls.loc[mask, "isNoBall"] = 0
 
     print("Target Creations...")
-    balls["batsman_runs_target"] = balls["batsman_runs"].astype(int)
     balls["isWide_target"] = balls["isWide"].astype(int)
-    balls["isNoBall_target"] = balls["isNoBall"].astype(int)
     balls["is_wicket_target"] = balls["is_wicket"].astype(int)
-
-    print("Boundary features...")
-    balls["is_boundary"] = balls["batsman_runs"].isin([4, 6]).astype(int)
-
-    def compute_balls_since_boundary(x):
-        groups = x.cumsum()
-        result = x.groupby(groups).cumcount()
-        result[groups == 0] = range(1, (groups == 0).sum() + 1)
-        return result
-
-    balls["balls_since_boundary"] = balls.groupby(["matchId", "inning"])[
-        "is_boundary"
-    ].transform(compute_balls_since_boundary)
-
-    balls["balls_since_boundary"] = (
-        balls.groupby(["matchId", "inning"])["balls_since_boundary"].shift(1).fillna(0)
-    )
-
-    balls["balls_since_boundary"] = balls["balls_since_boundary"].astype(int)
-
-    print("Previous Creation...")
-    for col in ["batsman_runs", "isWide", "isNoBall", "is_wicket", "total_runs"]:
-        balls[f"prev_{col}"] = (
-            balls.groupby(["matchId", "inning"])[col].shift(1).fillna(0)
-        )
 
     balls["score_before"] = (
         balls.groupby(["matchId", "inning"])["current_score"].shift(1).fillna(0)
@@ -222,17 +171,109 @@ def build_features():
         balls["percentage_target_achieved"].replace([np.inf, -np.inf], 0).fillna(0)
     )
 
-    print("Merging match metadata...")
-    balls = balls.merge(matches[["matchId", "venue"]], on="matchId", how="left")
-
-    print("Run rate features...")
-    balls["balls_bowled"] = (
-        balls.groupby(["matchId", "inning"])["legal_ball_1"]
-        .cumsum()
-        .groupby([balls["matchId"], balls["inning"]])
-        .shift(fill_value=0)
+    print("Merging match metadata and toss features...")
+    balls = balls.merge(
+        matches[["matchId", "venue", "match_state", "toss_decision"]],
+        on="matchId",
+        how="left",
     )
 
+    balls["batting_first"] = (balls["inning"] == 0).astype(int)
+    balls["toss_won"] = 0
+    balls.loc[
+        (balls["batting_first"] == 1) & (balls["toss_decision"] == "bat"), "toss_won"
+    ] = 1
+    balls.loc[
+        (balls["batting_first"] == 0) & (balls["toss_decision"] == "field"), "toss_won"
+    ] = 1
+
+    print("Encoding match state features...")
+    state_map = {
+        "Starting": 1,
+        "Middle": 2,
+        "Business_End": 3,
+        "Playoffs": 4,
+        "Final": 5,
+    }
+    balls["match_state_id"] = balls["match_state"].map(state_map).fillna(1).astype(int)
+
+    balls.drop(columns=["match_state", "toss_decision", "batting_first"], inplace=True)
+
+    print("Merging Offline Stats (Form, H2H, Venue)...")
+
+    season_map = matches.set_index("matchId")["season"]
+    balls["season"] = balls["matchId"].map(season_map)
+
+    batter_form = pd.read_parquet(BATTER_FORM_PATH)
+    bowler_form = pd.read_parquet(BOWLER_FORM_PATH)
+
+    batter_form = batter_form.rename(
+        columns={"history_matches": "batter_history_matches"}
+    )
+    bowler_form = bowler_form.rename(
+        columns={"history_matches": "bowler_history_matches"}
+    )
+
+    balls = balls.merge(
+        batter_form,
+        on=["matchId", "batsman"],
+        how="left",
+    )
+
+    balls = balls.merge(
+        bowler_form,
+        on=["matchId", "bowler"],
+        how="left",
+    )
+
+    form_cols = [
+        "batter_history_matches",
+        "last_1_runs",
+        "last_1_balls",
+        "last_2_runs",
+        "last_2_balls",
+        "last_3_runs",
+        "last_3_balls",
+        "bowler_history_matches",
+        "last_1_runs_conceded",
+        "last_1_balls_bowled",
+        "last_2_runs_conceded",
+        "last_2_balls_bowled",
+        "last_3_runs_conceded",
+        "last_3_balls_bowled",
+    ]
+    balls[form_cols] = balls[form_cols].fillna(0)
+
+    with open(VENUE_PHASE_AVG_PATH, "r") as f:
+        venue_avg_raw = json.load(f)
+
+    venue_phase_dict = {
+        ast.literal_eval(key): float(stats["scoring_index"])
+        for key, stats in venue_avg_raw.items()
+    }
+
+    balls["temp_phase"] = pd.cut(
+        balls["over"], bins=[-1, 5.9, 14.9, 20], labels=["PP", "Middle", "Death"]
+    ).astype(str)
+
+    balls["season_bucket"] = pd.cut(
+        balls["season"],
+        bins=[2007, 2013, 2019, 2022, 2025],
+        labels=["2008_2013", "2014_2019", "2020_2022", "2023_2025"],
+    ).astype(str)
+
+    balls["venue_phase_avg"] = (
+        balls.set_index(["season_bucket", "venue", "temp_phase"])
+        .index.map(venue_phase_dict)
+        .fillna(1.0)
+    )
+    balls.drop(columns=["temp_phase", "season_bucket"], inplace=True)
+
+    print("Run rate features...")
+    TOTAL_BALLS = 120
+
+    balls["balls_bowled"] = balls.groupby(["matchId", "inning"])["legal_ball_1"].cumsum() - balls["legal_ball_1"]
+    
     balls["balls_remaining"] = TOTAL_BALLS - balls["balls_bowled"]
 
     balls["overs_bowled"] = balls["balls_bowled"] / 6
@@ -255,15 +296,13 @@ def build_features():
     with open("../New Data/data/updated_pacers.json", "r") as f:
         pacers = json.load(f)
 
-    balls["is_pacer"] = balls["bowler"].apply(lambda x: 1 if x in pacers else 0)
+    balls["is_pacer"] = balls["bowler"].isin(pacers).astype(int)
 
     balls["over"] = balls["over"] / 20
-
-    season_map = matches.set_index("matchId")["season"]
-    balls["season"] = balls["matchId"].map(season_map)
-
     balls["sin_ball"] = np.sin(2 * np.pi * balls["legal_ball"] / 6)
     balls["cos_ball"] = np.cos(2 * np.pi * balls["legal_ball"] / 6)
+
+    balls["rr_momentum"] = balls["required_run_rate"] - balls["current_run_rate"]
 
     print("Dropping columns...")
     balls.drop(
@@ -276,16 +315,13 @@ def build_features():
             "batsman_runs",
             "batting_team",
             "bowling_team",
-            "current_score",
             "date",
             "isNoBall",
             "isWide",
-            "is_boundary",
             "is_legal",
             "is_wicket",
             "legal_ball",
             "legal_ball_1",
-            "over_number",
             "over_number",
             "overs_bowled",
             "player_dismissed",
@@ -297,49 +333,38 @@ def build_features():
     )
 
     print("Normalization...")
-    balls["prev_batsman_runs"] /= 6
-    balls["prev_total_runs"] /= 6
     balls["balls_remaining"] /= 120
     balls["wickets_before"] /= 10
-    balls["balls_since_boundary"] /= 120
-    balls["score_before"] /= 200
-    balls["target"] /= 200
-    balls["last_over_runs"] /= 36
+    balls["score_before"] /= 180
+    balls["target"] /= 180
     balls["total_balls"] /= 10
 
-    balls["season"] = ((balls["season"] - 2007)) / 20
-
+    balls["current_score"] /= 180
     balls["current_run_rate"] /= 36
     balls["required_run_rate"] /= 36
     balls["required_run_rate"] = balls["required_run_rate"].clip(upper=2)
+    balls["batter_history_matches"] /= 100
+    balls["last_1_runs"] /= 100
+    balls["last_2_runs"] /= 100
+    balls["last_3_runs"] /= 100
+    balls["last_1_balls"] /= 60
+    balls["last_2_balls"] /= 60
+    balls["last_3_balls"] /= 60
+
+    balls["bowler_history_matches"] /= 100
+    balls["last_1_runs_conceded"] /= 40
+    balls["last_2_runs_conceded"] /= 40
+    balls["last_3_runs_conceded"] /= 40
+    balls["last_1_balls_bowled"] /= 24
+    balls["last_2_balls_bowled"] /= 24
+    balls["last_3_balls_bowled"] /= 24
+    balls["rr_momentum"] /= 10
+    balls['rr_momentum'] = balls['rr_momentum'].clip(-2, 2)
 
     print("Final shape:", balls.shape)
 
     print("Saving features...")
     balls.to_parquet(FEATURES_PATH, index=False)
-
-    save_metadata(
-        dataset_name="features",
-        dataset_path=FEATURES_PATH,
-        raw_sources=[str(CLEAN_DELIVERIES_PATH), str(CLEAN_MATCHES_PATH)],
-        preprocessing=[
-            "ball_level_aggregation",
-            "no_ball_correction",
-            "wide_ball_expansion",
-            "legal_ball_reconstruction",
-            "innings_ball_filtering",
-            "phase_feature_creation",
-            "cumulative_score_tracking",
-            "wicket_tracking",
-            "target_generation",
-            "run_rate_features",
-            "required_run_rate_handling",
-            "match_metadata_merge",
-            "feature_normalization",
-            "column_pruning",
-        ],
-        df=balls,
-    )
 
     print("Features saved successfully.")
 

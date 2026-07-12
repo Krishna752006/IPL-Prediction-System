@@ -34,15 +34,12 @@
 - 🔜 Rate limiting
 - 🔜 JWT authentication
 - 🔜 Role-based access control (Free vs $10 tier gating)
-- 🔜 Async processing
-- 🔜 API versioning
 - 🔜 Secrets management
 - 🔜 Centralized config system
 
 ## 3. Frontend Engineering
 
 - ✅ React (skeleton)
-- 🔜 TypeScript migration
 - 🔜 Component-based architecture
 - 🔜 Dashboard layout
 - 🔜 Match prediction UI
@@ -53,11 +50,9 @@
 - 🔜 State management
 - 🔜 Responsive design
 - 🔜 Error boundaries
-- 🔜 Loading states
 - 🔜 Form validation
 - 🔜 UI component library
 - 🔜 Chart library
-- 🔜 Dark / light theme
 - 🔜 Routing system
 - 🔜 Subscription UI (Free vs $10 tier)
 - 🔜 Payment integration UI
@@ -98,7 +93,7 @@
 - ✅ Model configuration (YAML-driven)
 - ✅ Experiment tracking (MLflow)
 - ✅ Reproducible training pipeline
-- 🔜 Player embedding system (batter, bowler, base, venue, form)
+- 🔜 Player embedding system (batter, bowler, base, venue)
 - 🔜 Wicket prediction model
 - 🔜 First 6 balls runs model
 - 🔜 LSTM or GRU innings sequence model (decided by results)
@@ -172,7 +167,6 @@
 - 🔜 Automated testing in CI
 - 🔜 Deployment pipeline
 - 🔜 Cloud hosting (AWS / Render)
-- 🔜 Reverse proxy
 - 🔜 Domain setup
 - 🔜 HTTPS
 - 🔜 Static frontend hosting

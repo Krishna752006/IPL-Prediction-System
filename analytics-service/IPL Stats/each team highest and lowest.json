@@ -1,0 +1,114 @@
+{
+  "highest_and_lowest_scores_against_each_current_team_till_2025": {
+    "CSK": {
+      "vs_MI": {"highest": "218", "lowest": "79"},
+      "vs_RCB": {"highest": "226", "lowest": "82"},
+      "vs_KKR": {"highest": "235", "lowest": "114"},
+      "vs_DC": {"highest": "223", "lowest": "110"},
+      "vs_RR": {"highest": "246", "lowest": "109"},
+      "vs_PBKS": {"highest": "240", "lowest": "116"},
+      "vs_SRH": {"highest": "223", "lowest": "132"},
+      "vs_GT": {"highest": "230", "lowest": "133"},
+      "vs_LSG": {"highest": "217", "lowest": "176"}
+    },
+    "MI": {
+    "vs_CSK": {"highest": "219", "lowest": "103"},
+    "vs_RCB": {"highest": "213", "lowest": "111"},
+    "vs_KKR": {"highest": "224", "lowest": "108"},
+    "vs_DC": {"highest": "247", "lowest": "92"},
+    "vs_RR": {"highest": "217", "lowest": "90"},
+    "vs_PBKS": {"highest": "223", "lowest": "87"},
+    "vs_SRH": {"highest": "246", "lowest": "87"},
+    "vs_GT": {"highest": "218", "lowest": "152"},
+    "vs_LSG": {"highest": "215", "lowest": "132"}
+  },
+    "RCB": {
+    "vs_CSK": {"highest": "218", "lowest": "70"},
+    "vs_MI": {"highest": "235", "lowest": "122"},
+    "vs_KKR": {"highest": "221", "lowest": "49"},
+    "vs_DC": {"highest": "215", "lowest": "137"},
+    "vs_RR": {"highest": "205", "lowest": "70"},
+    "vs_PBKS": {"highest": "241", "lowest": "84"},
+    "vs_SRH": {"highest": "262", "lowest": "68"},
+    "vs_GT": {"highest": "206", "lowest": "170"},
+    "vs_LSG": {"highest": "212", "lowest": "126"}
+  },
+    "KKR": {
+    "vs_CSK": {"highest": "202", "lowest": "108"},
+    "vs_MI": {"highest": "232", "lowest": "67"},
+    "vs_RCB": {"highest": "222", "lowest": "84"},
+    "vs_DC": {"highest": "272", "lowest": "97"},
+    "vs_RR": {"highest": "223", "lowest": "85"},
+    "vs_PBKS": {"highest": "261", "lowest": "95"},
+    "vs_SRH": {"highest": "208", "lowest": "101"},
+    "vs_GT": {"highest": "207", "lowest": "148"},
+    "vs_LSG": {"highest": "235", "lowest": "101"}
+  },
+    "DC": {
+    "vs_CSK": {"highest": "198", "lowest": "83"},
+    "vs_MI": {"highest": "257", "lowest": "66"},
+    "vs_RCB": {"highest": "196", "lowest": "95"},
+    "vs_KKR": {"highest": "228", "lowest": "98"},
+    "vs_RR": {"highest": "221", "lowest": "87"},
+    "vs_PBKS": {"highest": "231", "lowest": "67"},
+    "vs_SRH": {"highest": "207", "lowest": "80"},
+    "vs_GT": {"highest": "224", "lowest": "157"},
+    "vs_LSG": {"highest": "211", "lowest": "143"}
+  },
+    "RR": {
+    "vs_CSK": {"highest": "223", "lowest": "126"},
+    "vs_MI": {"highest": "212", "lowest": "90"},
+    "vs_RCB": {"highest": "217", "lowest": "58"},
+    "vs_KKR": {"highest": "224", "lowest": "81"},
+    "vs_DC": {"highest": "222", "lowest": "115"},
+    "vs_PBKS": {"highest": "226", "lowest": "112"},
+    "vs_SRH": {"highest": "242", "lowest": "102"},
+    "vs_GT": {"highest": "212", "lowest": "118"},
+    "vs_LSG": {"highest": "199", "lowest": "144"}
+  },
+    "PBKS": {
+    "vs_CSK": {"highest": "231", "lowest": "92"},
+    "vs_MI": {"highest": "230", "lowest": "119"},
+    "vs_RCB": {"highest": "232", "lowest": "88"},
+    "vs_KKR": {"highest": "262", "lowest": "111"},
+    "vs_DC": {"highest": "231", "lowest": "104"},
+    "vs_RR": {"highest": "223", "lowest": "124"},
+    "vs_SRH": {"highest": "214", "lowest": "119"},
+    "vs_GT": {"highest": "243", "lowest": "142"},
+    "vs_LSG": {"highest": "201", "lowest": "159"}
+  },
+    "SRH": {
+    "vs_CSK": {"highest": "194", "lowest": "134"},
+    "vs_MI": {"highest": "277", "lowest": "96"},
+    "vs_RCB": {"highest": "287", "lowest": "125"},
+    "vs_KKR": {"highest": "278", "lowest": "113"},
+    "vs_DC": {"highest": "266", "lowest": "96"},
+    "vs_RR": {"highest": "217", "lowest": "127"},
+    "vs_PBKS": {"highest": "215", "lowest": "114"},
+    "vs_GT": {"highest": "195", "lowest": "152"},
+    "vs_LSG": {"highest": "190", "lowest": "121"}
+  },
+    "GT": {
+    "vs_CSK": {"highest": "231", "lowest": "143"},
+    "vs_MI": {"highest": "233", "lowest": "168"},
+    "vs_RCB": {"highest": "200", "lowest": "147"},
+    "vs_KKR": {"highest": "204", "lowest": "156"},
+    "vs_DC": {"highest": "220", "lowest": "89"},
+    "vs_RR": {"highest": "217", "lowest": "177"},
+    "vs_PBKS": {"highest": "232", "lowest": "143"},
+    "vs_SRH": {"highest": "199", "lowest": "162"},
+    "vs_LSG": {"highest": "227", "lowest": "130"}
+  },
+    "LSG": {
+    "vs_CSK": {"highest": "213", "lowest": "125"},
+    "vs_MI": {"highest": "214", "lowest": "101"},
+    "vs_RCB": {"highest": "213", "lowest": "108"},
+    "vs_KKR": {"highest": "238", "lowest": "137"},
+    "vs_DC": {"highest": "195", "lowest": "155"},
+    "vs_RR": {"highest": "196", "lowest": "154"},
+    "vs_PBKS": {"highest": "257", "lowest": "133"},
+    "vs_SRH": {"highest": "185", "lowest": "127"},
+    "vs_GT": {"highest": "171", "lowest": "82"}
+  }
+  }
+}

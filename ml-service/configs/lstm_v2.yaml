@@ -1,0 +1,30 @@
+experiment:
+  name: ipl_lstm_v2
+
+data:
+  path: data/processed/ab/features.parquet
+  dataset_version: ab
+  feature_version: lstm_features_v1
+  test_size: 0.1
+  val_size: 0.2
+  random_seed: 42
+
+model:
+  type: LSTM
+  epochs: 10
+  batch_size: 1000
+  learning_rate: 0.004
+  lstm1_units: 100
+  lstm2_units: 50
+  dense1: 10
+  dense2: 10
+
+validation_gate:
+  test_mae: 0.34
+  test_r2: 0.79
+
+paths:
+  staging_dir: models/staging
+  production_dir: models/production
+  mlflow_db: experiments/mlruns.db
+  embeddings_json: saved_seasons

@@ -2,8 +2,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
-from core.config import CLEAN_DELIVERIES_PATH, CLEAN_MATCHES_PATH, RAW_DELIVERIES
-from core.metadata import save_metadata
+from config import CLEAN_DELIVERIES_PATH, CLEAN_MATCHES_PATH, RAW_DELIVERIES
 
 
 def clean_deliveries():
@@ -12,7 +11,7 @@ def clean_deliveries():
     balls = pd.read_csv(RAW_DELIVERIES)
 
     print("Converting date...")
-    balls["date"] = pd.to_datetime(balls["date"])
+    balls["date"] = pd.to_datetime(balls["date"], dayfirst=True)
 
     print("Filling missing values...")
     balls["isWide"] = balls["isWide"].fillna(0)
@@ -79,25 +78,6 @@ def clean_deliveries():
     balls.to_parquet(CLEAN_DELIVERIES_PATH, index=False)
 
     print("Clean deliveries saved successfully.")
-
-    save_metadata(
-        dataset_name="clean_deliveries",
-        dataset_path=CLEAN_DELIVERIES_PATH,
-        raw_sources=[str(RAW_DELIVERIES), str(CLEAN_MATCHES_PATH)],
-        preprocessing=[
-            "date_type_conversion",
-            "extras_null_imputation",
-            "dismissal_null_imputation",
-            "total_runs_computation",
-            "column_pruning",
-            "inning_filtering_and_mapping",
-            "type_casting_numeric_fields",
-            "invalid_match_removal_using_clean_matches",
-            "duplicate_removal",
-            "chronological_sorting",
-        ],
-        df=balls,
-    )
 
 
 if __name__ == "__main__":

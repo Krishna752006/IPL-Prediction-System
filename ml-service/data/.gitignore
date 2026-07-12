@@ -1,2 +1,3 @@
 **/*.parquet
 metadata/
+**/offline_stats

@@ -1,0 +1,112 @@
+[
+  {
+    "team": "SRH",
+    "highest": {
+      "score": "287/3",
+      "opposition": "RCB"
+    },
+    "lowest": {
+      "score": "96",
+      "opposition": "MI"
+    }
+  },
+  {
+    "team": "RCB",
+    "highest": {
+      "score": "263/5",
+      "opposition": "PWI"
+    },
+    "lowest": {
+      "score": "49",
+      "opposition": "KKR"
+    }
+  },
+  {
+    "team": "KKR",
+    "highest": {
+      "score": "272/7",
+      "opposition": "DC"
+    },
+    "lowest": {
+      "score": "67",
+      "opposition": "MI"
+    }
+  },
+  {
+    "team": "PBKS",
+    "highest": {
+      "score": "262/2",
+      "opposition": "KKR"
+    },
+    "lowest": {
+      "score": "73",
+      "opposition": "RPS"
+    }
+  },
+  {
+    "team": "DC",
+    "highest": {
+      "score": "257/4",
+      "opposition": "MI"
+    },
+    "lowest": {
+      "score": "66",
+      "opposition": "MI"
+    }
+  },
+  {
+    "team": "CSK",
+    "highest": {
+      "score": "246/5",
+      "opposition": "RR"
+    },
+    "lowest": {
+      "score": "79",
+      "opposition": "MI"
+    }
+  },
+  {
+    "team": "MI",
+    "highest": {
+      "score": "247/9",
+      "opposition": "DC"
+    },
+    "lowest": {
+      "score": "87",
+      "opposition": "SRH"
+    }
+  },
+  {
+    "team": "RR",
+    "highest": {
+      "score": "242/6",
+      "opposition": "SRH"
+    },
+    "lowest": {
+      "score": "58",
+      "opposition": "RCB"
+    }
+  },
+  {
+    "team": "GT",
+    "highest": {
+      "score": "233/3",
+      "opposition": "MI"
+    },
+    "lowest": {
+      "score": "89",
+      "opposition": "DC"
+    }
+  },
+  {
+    "team": "LSG",
+    "highest": {
+      "score": "257/5",
+      "opposition": "PBKS"
+    },
+    "lowest": {
+      "score": "82",
+      "opposition": "GT"
+    }
+  }
+]

@@ -1,9 +1,9 @@
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
-from core.config import CLEAN_MATCHES_PATH, RAW_MATCHES
-from core.metadata import save_metadata
+from config import CLEAN_MATCHES_PATH, RAW_MATCHES
 
 
 def clean_matches():
@@ -43,7 +43,6 @@ def clean_matches():
             "eliminator",
             "date1",
             "date2",
-            "toss_decision",
             "method",
             "gender",
             "balls_per_over",
@@ -73,6 +72,30 @@ def clean_matches():
     print("Sorting by date...")
     matches = matches.sort_values("date")
 
+    print("Adding Match State context...")
+    matches["season_match_no"] = matches.groupby("season").cumcount() + 1
+    matches["season_total_matches"] = matches.groupby("season")[
+        "season_match_no"
+    ].transform("max")
+
+    matches_remaining = matches["season_total_matches"] - matches["season_match_no"]
+    league_total = np.where(
+        matches["season"] > 2010,
+        matches["season_total_matches"] - 4,
+        matches["season_total_matches"] - 3,
+    )
+    progress = matches["season_match_no"] / league_total
+
+    conditions = [
+        matches_remaining == 0,
+        matches_remaining < 4,
+        progress <= 0.50,
+        progress <= 0.75,
+    ]
+    choices = ["Final", "Playoffs", "Starting", "Middle"]
+    matches["match_state"] = np.select(conditions, choices, default="Business_End")
+    matches.drop(columns=["season_match_no", "season_total_matches"], inplace=True)
+
     print("Checking if Folder is present...")
     CLEAN_MATCHES_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -80,24 +103,6 @@ def clean_matches():
     matches.to_parquet(CLEAN_MATCHES_PATH, index=False)
 
     print("Clean matches saved successfully.")
-
-    save_metadata(
-        dataset_name="clean_matches",
-        dataset_path=CLEAN_MATCHES_PATH,
-        raw_sources=[str(RAW_MATCHES)],
-        preprocessing=[
-            "season_normalization",
-            "winner_imputation_from_eliminator",
-            "winner_margin_null_fill",
-            "dl_method_removal",
-            "non_result_match_removal",
-            "column_pruning",
-            "venue_mapping",
-            "date_type_conversion",
-            "chronological_sorting",
-        ],
-        df=matches,
-    )
 
 
 if __name__ == "__main__":

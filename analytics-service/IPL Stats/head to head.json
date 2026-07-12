@@ -1,0 +1,55 @@
+[
+ {"_id":"CSK_DC","team1":"CSK","team2":"DC","matchesPlayed":31,"team1Wins":19,"team2Wins":12,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_GT","team1":"CSK","team2":"GT","matchesPlayed":8,"team1Wins":4,"team2Wins":4,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_KKR","team1":"CSK","team2":"KKR","matchesPlayed":31,"team1Wins":20,"team2Wins":11,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_LSG","team1":"CSK","team2":"LSG","matchesPlayed":5,"team1Wins":2,"team2Wins":3,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_MI","team1":"CSK","team2":"MI","matchesPlayed":43,"team1Wins":21,"team2Wins":22,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_PBKS","team1":"CSK","team2":"PBKS","matchesPlayed":34,"team1Wins":17,"team2Wins":17,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_RCB","team1":"CSK","team2":"RCB","matchesPlayed":37,"team1Wins":22,"team2Wins":14,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_RR","team1":"CSK","team2":"RR","matchesPlayed":33,"team1Wins":16,"team2Wins":17,"lastUpdated":"31-12-2025"},
+  {"_id":"CSK_SRH","team1":"CSK","team2":"SRH","matchesPlayed":24,"team1Wins":16,"team2Wins":8,"lastUpdated":"31-12-2025"},
+
+  {"_id":"DC_GT","team1":"DC","team2":"GT","matchesPlayed":7,"team1Wins":3,"team2Wins":4,"lastUpdated":"31-12-2025"},
+  {"_id":"DC_KKR","team1":"DC","team2":"KKR","matchesPlayed":32,"team1Wins":15,"team2Wins":16,"lastUpdated":"31-12-2025"},
+  {"_id":"DC_LSG","team1":"DC","team2":"LSG","matchesPlayed":6,"team1Wins":4,"team2Wins":3,"lastUpdated":"31-12-2025"},
+  {"_id":"DC_MI","team1":"DC","team2":"MI","matchesPlayed":38,"team1Wins":17,"team2Wins":21,"lastUpdated":"31-12-2025"},
+  {"_id":"DC_PBKS","team1":"DC","team2":"PBKS","matchesPlayed":34,"team1Wins":17,"team2Wins":17,"lastUpdated":"31-12-2025"},
+  {"_id":"DC_RCB","team1":"DC","team2":"RCB","matchesPlayed":35,"team1Wins":14,"team2Wins":20,"lastUpdated":"31-12-2025"},
+  {"_id":"DC_RR","team1":"DC","team2":"RR","matchesPlayed":31,"team1Wins":16,"team2Wins":15,"lastUpdated":"31-12-2025"},
+  {"_id":"DC_SRH","team1":"DC","team2":"SRH","matchesPlayed":25,"team1Wins":12,"team2Wins":13,"lastUpdated":"31-12-2025"},
+
+  {"_id":"GT_KKR","team1":"GT","team2":"KKR","matchesPlayed":4,"team1Wins":3,"team2Wins":1,"lastUpdated":"31-12-2025"},
+  {"_id":"GT_LSG","team1":"GT","team2":"LSG","matchesPlayed":7,"team1Wins":4,"team2Wins":3,"lastUpdated":"31-12-2025"},
+  {"_id":"GT_MI","team1":"GT","team2":"MI","matchesPlayed":8,"team1Wins":5,"team2Wins":3,"lastUpdated":"31-12-2025"},
+  {"_id":"GT_PBKS","team1":"GT","team2":"PBKS","matchesPlayed":6,"team1Wins":3,"team2Wins":3,"lastUpdated":"31-12-2025"},
+  {"_id":"GT_RCB","team1":"GT","team2":"RCB","matchesPlayed":6,"team1Wins":3,"team2Wins":3,"lastUpdated":"31-12-2025"},
+  {"_id":"GT_RR","team1":"GT","team2":"RR","matchesPlayed":8,"team1Wins":6,"team2Wins":2,"lastUpdated":"31-12-2025"},
+  {"_id":"GT_SRH","team1":"GT","team2":"SRH","matchesPlayed":6,"team1Wins":5,"team2Wins":1,"lastUpdated":"31-12-2025"},
+
+  {"_id":"KKR_LSG","team1":"KKR","team2":"LSG","matchesPlayed":6,"team1Wins":4,"team2Wins":2,"lastUpdated":"31-12-2025"},
+  {"_id":"KKR_MI","team1":"KKR","team2":"MI","matchesPlayed":36,"team1Wins":11,"team2Wins":25,"lastUpdated":"31-12-2025"},
+  {"_id":"KKR_PBKS","team1":"KKR","team2":"PBKS","matchesPlayed":36,"team1Wins":21,"team2Wins":13,"lastUpdated":"31-12-2025"},
+  {"_id":"KKR_RCB","team1":"KKR","team2":"RCB","matchesPlayed":37,"team1Wins":20,"team2Wins":16,"lastUpdated":"31-12-2025"},
+  {"_id":"KKR_RR","team1":"KKR","team2":"RR","matchesPlayed":33,"team1Wins":17,"team2Wins":14,"lastUpdated":"31-12-2025"},
+  {"_id":"KKR_SRH","team1":"KKR","team2":"SRH","matchesPlayed":32,"team1Wins":21,"team2Wins":11,"lastUpdated":"31-12-2025"},
+
+  {"_id":"LSG_MI","team1":"LSG","team2":"MI","matchesPlayed":6,"team1Wins":6,"team2Wins":2,"lastUpdated":"31-12-2025"},
+  {"_id":"LSG_PBKS","team1":"LSG","team2":"PBKS","matchesPlayed":6,"team1Wins":3,"team2Wins":3,"lastUpdated":"31-12-2025"},
+  {"_id":"LSG_RCB","team1":"LSG","team2":"RCB","matchesPlayed":6,"team1Wins":2,"team2Wins":4,"lastUpdated":"31-12-2025"},
+  {"_id":"LSG_RR","team1":"LSG","team2":"RR","matchesPlayed":6,"team1Wins":4,"team2Wins":2,"lastUpdated":"31-12-2025"},
+  {"_id":"LSG_SRH","team1":"LSG","team2":"SRH","matchesPlayed":6,"team1Wins":4,"team2Wins":2,"lastUpdated":"31-12-2025"},
+
+  {"_id":"MI_PBKS","team1":"MI","team2":"PBKS","matchesPlayed":34,"team1Wins":17,"team2Wins":16,"lastUpdated":"31-12-2025"},
+  {"_id":"MI_RCB","team1":"MI","team2":"RCB","matchesPlayed":37,"team1Wins":21,"team2Wins":15,"lastUpdated":"31-12-2025"},
+  {"_id":"MI_RR","team1":"MI","team2":"RR","matchesPlayed":33,"team1Wins":17,"team2Wins":16,"lastUpdated":"31-12-2025"},
+  {"_id":"MI_SRH","team1":"MI","team2":"SRH","matchesPlayed":25,"team1Wins":14,"team2Wins":10,"lastUpdated":"31-12-2025"},
+
+  {"_id":"PBKS_RCB","team1":"PBKS","team2":"RCB","matchesPlayed":38,"team1Wins":18,"team2Wins":20,"lastUpdated":"31-12-2025"},
+  {"_id":"PBKS_RR","team1":"PBKS","team2":"RR","matchesPlayed":30,"team1Wins":13,"team2Wins":17,"lastUpdated":"31-12-2025"},
+  {"_id":"PBKS_SRH","team1":"PBKS","team2":"SRH","matchesPlayed":25,"team1Wins":8,"team2Wins":17,"lastUpdated":"31-12-2025"},
+
+  {"_id":"RCB_RR","team1":"RCB","team2":"RR","matchesPlayed":35,"team1Wins":17,"team2Wins":15,"lastUpdated":"31-12-2025"},
+  {"_id":"RCB_SRH","team1":"RCB","team2":"SRH","matchesPlayed":27,"team1Wins":12,"team2Wins":13,"lastUpdated":"31-12-2025"},
+
+  {"_id":"RR_SRH","team1":"RR","team2":"SRH","matchesPlayed":20,"team1Wins":9,"team2Wins":11,"lastUpdated":"31-12-2025"}
+]
