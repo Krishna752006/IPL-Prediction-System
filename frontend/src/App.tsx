@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -7,6 +6,9 @@ import Register from './pages/Register';
 import Predictions from './pages/Predictions';
 import Statistics from './pages/Statistics';
 import TeamAnalysis from './pages/TeamAnalysis';
+import Schedule from './pages/Schedule';
+import PointsTable from './pages/PointsTable';
+import PredictionHistory from './pages/PredictionHistory';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
@@ -20,12 +22,36 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route 
+              path="/schedule" 
+              element={
+                <ProtectedRoute>
+                  <Schedule />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/points-table" 
+              element={
+                <ProtectedRoute>
+                  <PointsTable />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/predictions" 
               element={
                 <ProtectedRoute>
                   <Predictions />
                 </ProtectedRoute>
               } 
+            />
+            <Route 
+              path="/prediction-history" 
+              element={
+                <ProtectedRoute>
+                  <PredictionHistory />
+                </ProtectedRoute>
+                }
             />
             <Route 
               path="/statistics" 

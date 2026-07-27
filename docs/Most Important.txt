@@ -10,13 +10,9 @@
 -> REST API
 -> CORS
 -> JWT
--> Auth0
 -> Role Based
--> Payment Integration
--> Rate Limitting
 -> Stats Page
 
--> Docker
 -> HTTPS
 
 -> Docs

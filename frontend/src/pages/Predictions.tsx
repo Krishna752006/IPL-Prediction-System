@@ -1,167 +1,478 @@
-import React, { useState, useEffect } from 'react';
-import { Brain } from 'lucide-react';
-import PredictionModel from '../utils/PredictionModel';
-
-interface PredictionResult {
-  teamA: {
-    score: number;
-    wickets: number;
-    run_rate: number;
-  };
-  teamB: {
-    score: number;
-    wickets: number;
-    run_rate: number;
-    match_result: string;
-  };
-}
+import React, { useState } from "react";
+import { Brain, Loader2 } from "lucide-react";
+import PredictionModel, {
+  PredictionResult,
+} from "../utils/PredictionModel";
+import { savePredictionHistory } from "../api/historyApi";
+import { useAuthStore } from "../store/authStore";
 
 const Predictions: React.FC = () => {
-  const [team1, setTeam1] = useState<number | null>(null);
-  const [team2, setTeam2] = useState<number | null>(null);
-  const [venue, setVenue] = useState<number | null>(null);
-  const [prediction, setPrediction] = useState<PredictionResult | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isPredictDisabled, setIsPredictDisabled] = useState<boolean>(false);
-  const [countdown, setCountdown] = useState<number>(0);
+  const { user } = useAuthStore();
+  const [team1, setTeam1] = useState("");
+  const [team2, setTeam2] = useState("");
+  const [venue, setVenue] = useState("");
+
+  const [prediction, setPrediction] =
+    useState<PredictionResult | null>(null);
+
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const teams = [
-    { id: 1, name: 'Chennai Super Kings' },
-    { id: 2, name: 'Delhi Capitals' },
-    { id: 5, name: 'Kolkata Knight Riders' },
-    { id: 7, name: 'Mumbai Indians' },
-    { id: 9, name: 'Punjab Kings' },
-    { id: 10, name: 'Rajasthan Royals' },
-    { id: 12, name: 'Royal Challengers Bangalore' },
-    { id: 13, name: 'Sunrisers Hyderabad' },
-    { id: 3, name: 'Gujarat Titans' },
-    { id: 6, name: 'Lucknow Super Giants' }
+    { code: "CSK", name: "Chennai Super Kings" },
+    { code: "MI", name: "Mumbai Indians" },
+    { code: "RCB", name: "Royal Challengers Bengaluru" },
+    { code: "KKR", name: "Kolkata Knight Riders" },
+    { code: "SRH", name: "Sunrisers Hyderabad" },
+    { code: "RR", name: "Rajasthan Royals" },
+    { code: "PBKS", name: "Punjab Kings" },
+    { code: "DC", name: "Delhi Capitals" },
+    { code: "GT", name: "Gujarat Titans" },
+    { code: "LSG", name: "Lucknow Super Giants" },
   ];
 
   const venues = [
-    { id: 1, name: 'Arun Jaitley Stadium' },
-    { id: 3, name: 'Barsapara Cricket Stadium' },
-    { id: 7, name: 'Dr DY Patil Sports Academy' },
-    { id: 10, name: 'Eden Gardens' },
-    { id: 11, name: 'Ekana Cricket Stadium' },
-    { id: 12, name: 'Feroz Shah Kotla' },
-    { id: 18, name: 'M Chinnaswamy Stadium' },
-    { id: 19, name: 'MA Chidambaram Stadium' },
-    { id: 20, name: 'Maharaja Yadavindra Singh International Cricket Stadium' },
-    { id: 22, name: 'Narendra Modi Stadium' },
-    { id: 27, name: 'Punjab Cricket Association IS Bindra Stadium' },
-    { id: 28, name: 'Punjab Cricket Association Stadium' },
-    { id: 29, name: 'Rajiv Gandhi International Stadium' },
-    { id: 30, name: 'Sardar Patel Stadium' },
-    { id: 31, name: 'Saurashtra Cricket Association Stadium' },
-    { id: 32, name: 'Sawai Mansingh Stadium' },
-    { id: 35, name: 'Sheikh Zayed Stadium' },
-    { id: 37, name: 'Subrata Roy Sahara Stadium' },
-    { id: 39, name: 'Vidarbha Cricket Association Stadium' },
-    { id: 40, name: 'Wankhede Stadium' }
-  ];
+    "ACA-VDCA Stadium, Visakhapatnam",
+    "Arun Jaitley Stadium, Delhi",
+    "Barsapara Stadium, Guwahati",
+    "Chepauk Stadium, Chennai",
+    "Chinnaswamy Stadium, Bengaluru",
+    "DY Patil Stadium, Mumbai",
+    "Eden Gardens, Kolkata",
+    "Ekana Stadium, Lucknow",
+    "Green Park, Kanpur",
+    "HPCA Stadium, Dharamsala",
+    "Holkar Stadium, Indore",
+    "IS Bindra Stadium, Mohali",
+    "JSCA Stadium, Ranchi",
+    "MCA Stadium, Pune",
+    "Mullanpur Stadium, Chandigarh",
+    "Narendra Modi Stadium, Ahmedabad",
+    "Rajiv Gandhi Stadium, Hyderabad",
+    "SCA Stadium, Rajkot",
+    "SMS Stadium, Jaipur",
+    "SVNS Stadium, Raipur",
+    "Sahara Stadium, Pune",
+    "VCA Stadium, Nagpur",
+    "Wankhede Stadium, Mumbai",
+];
 
   const handlePredict = async () => {
-    if (team1 === team2) {
-      setErrorMessage('Please give 2 different teams as input.');
+    if (!team1 || !team2) {
+      setErrorMessage("Please select both teams.");
       return;
     }
-    setErrorMessage(null);
 
-    if (team1 !== null && team2 !== null && venue !== null) {
-      const result = await PredictionModel.predict(team1, team2, venue);
+    if (team1 === team2) {
+      setErrorMessage("Please select two different teams.");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage("");
+
+    const result = await PredictionModel.predict(
+      team1,
+      team2,
+      venue || undefined
+    );
+
+    if (result) {
+
       setPrediction(result);
-      setIsPredictDisabled(true);
-      setCountdown(100);
-    }
+
+      const history = {
+
+          team_a: result.tournament_context.team_a,
+
+          team_b: result.tournament_context.team_b,
+
+          venue: result.tournament_context.venue,
+
+          winner: result.winner,
+
+          result: result.result
+
+      };
+
+      if (user?.isGuest) {
+
+          const existing = JSON.parse(
+              localStorage.getItem("predictionHistory") || "[]"
+          );
+
+          existing.unshift({
+
+              ...history,
+
+              predicted_at: new Date().toISOString()
+
+          });
+
+          localStorage.setItem(
+              "predictionHistory",
+              JSON.stringify(existing)
+          );
+
+      } else {
+
+          await savePredictionHistory(history);
+
+      }
+
+  }
+
+    setLoading(false);
   };
 
-  useEffect(() => {
-    if (countdown > 0) {
-      const timerId = setInterval(() => setCountdown((prev) => prev - 1), 1000);
-      return () => clearInterval(timerId);
-    } else {
-      setIsPredictDisabled(false);
-    }
-  }, [countdown]);
-
-  const getTeamName = (teamId: number | null) => {
-    return teams.find((team) => team.id === teamId)?.name || 'Unknown Team';
-  };
+  const getTeamName = (code: string) =>
+    teams.find((t) => t.code === code)?.name || code;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-5xl mx-auto">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-center mb-6">
+
+        <div className="flex justify-center mb-6">
           <Brain className="h-12 w-12 text-indigo-600" />
         </div>
 
-        <h2 className="text-2xl font-bold text-center mb-6">Match Prediction</h2>
+        <h2 className="text-3xl font-bold text-center mb-8">
+          IPL Match Prediction
+        </h2>
 
-        <div className="space-y-4">
+        <div className="grid md:grid-cols-3 gap-4">
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Team 1</label>
+            <label className="block text-sm font-medium mb-2">
+              Team 1
+            </label>
+
             <select
-              value={team1 || ''}
-              onChange={(e) => setTeam1(Number(e.target.value))}
-              className="w-full p-2 border rounded-md"
+              value={team1}
+              onChange={(e) => setTeam1(e.target.value)}
+              className="w-full border rounded-md p-2"
             >
-              <option value="">Select Team 1</option>
+              <option value="">Select Team</option>
+
               {teams.map((team) => (
-                <option key={team.id} value={team.id}>{team.name}</option>
+                <option key={team.code} value={team.code}>
+                  {team.name}
+                </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Team 2</label>
+            <label className="block text-sm font-medium mb-2">
+              Team 2
+            </label>
+
             <select
-              value={team2 || ''}
-              onChange={(e) => setTeam2(Number(e.target.value))}
-              className="w-full p-2 border rounded-md"
+              value={team2}
+              onChange={(e) => setTeam2(e.target.value)}
+              className="w-full border rounded-md p-2"
             >
-              <option value="">Select Team 2</option>
+              <option value="">Select Team</option>
+
               {teams.map((team) => (
-                <option key={team.id} value={team.id}>{team.name}</option>
+                <option key={team.code} value={team.code}>
+                  {team.name}
+                </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+            <label className="block text-sm font-medium mb-2">
+              Venue (Optional)
+            </label>
+
             <select
-              value={venue || ''}
-              onChange={(e) => setVenue(Number(e.target.value))}
-              className="w-full p-2 border rounded-md"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              className="w-full border rounded-md p-2"
             >
-              <option value="">Select Venue</option>
+              <option value="">Random Venue</option>
+
               {venues.map((v) => (
-                <option key={v.id} value={v.id}>{v.name}</option>
+                <option key={v} value={v}>
+                  {v}
+                </option>
               ))}
             </select>
           </div>
 
-          <button
-            onClick={handlePredict}
-            disabled={isPredictDisabled || team1 === null || team2 === null || venue === null}
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
-          >
-            {isPredictDisabled ? `Wait ${countdown}s` : 'Predict Winner'}
-          </button>
         </div>
 
-        {errorMessage && (
-          <div className="mt-4 text-red-500 font-medium">{errorMessage}</div>
-        )}
+        <button
+          onClick={handlePredict}
+          disabled={loading}
+          className="mt-6 w-full bg-indigo-600 hover:bg-indigo-700 text-white rounded-md py-3 transition"
+        >
+          {loading ? (
+            <div className="flex justify-center items-center gap-2">
+              <Loader2 className="animate-spin h-5 w-5" />
+              Predicting...
+            </div>
+          ) : (
+            "Predict Match"
+          )}
+        </button>
 
-        {prediction && (
-          <div className="mt-6 p-4 bg-gray-50 rounded-md">
-            <h3 className="text-lg font-semibold mb-2">Prediction Result:</h3>
-            <p><strong>{getTeamName(team1)}:</strong> {prediction.teamA.score} runs, {prediction.teamA.wickets} wickets, Run Rate: {prediction.teamA.run_rate}</p>
-            <p><strong>{getTeamName(team2)}:</strong> {prediction.teamB.score} runs, {prediction.teamB.wickets} wickets, Run Rate: {prediction.teamB.run_rate}</p>
-            <p><strong>Match Result:</strong> {prediction.teamB.match_result}</p>
+        {errorMessage && (
+          <div className="mt-4 text-red-600 font-medium">
+            {errorMessage}
           </div>
         )}
+
+        {/* Prediction Result starts here */}
+                {prediction && (
+          <div className="mt-8 space-y-6">
+
+            {/* Match Summary */}
+            <div className="bg-indigo-50 rounded-lg p-6 border border-indigo-200">
+              <h3 className="text-2xl font-bold mb-4">
+                Match Summary
+              </h3>
+
+              <div className="grid md:grid-cols-2 gap-4">
+
+                <div>
+                  <p>
+                    <strong>Team A:</strong>{" "}
+                    {getTeamName(
+                      prediction.tournament_context.team_a
+                    )}
+                  </p>
+
+                  <p>
+                    <strong>Team B:</strong>{" "}
+                    {getTeamName(
+                      prediction.tournament_context.team_b
+                    )}
+                  </p>
+
+                  <p>
+                    <strong>Venue:</strong>{" "}
+                    {prediction.tournament_context.venue}
+                  </p>
+                </div>
+
+                <div>
+                  <p>
+                    <strong>Toss Winner:</strong>{" "}
+                    {getTeamName(
+                      prediction.tournament_context.toss_winner
+                    )}
+                  </p>
+
+                  <p>
+                    <strong>Toss Decision:</strong>{" "}
+                    {prediction.tournament_context.toss_decision}
+                  </p>
+
+                  <p>
+                    <strong>Winner:</strong>{" "}
+                    <span className="text-green-700 font-bold">
+                      {getTeamName(prediction.winner)}
+                    </span>
+                  </p>
+
+                  <p>
+                    <strong>Result:</strong>{" "}
+                    {prediction.result}
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Innings */}
+
+            {prediction.innings.map((inning) => (
+              <div
+                key={inning.inning}
+                className="bg-white border rounded-lg shadow-md p-6"
+              >
+                <h3 className="text-xl font-bold mb-2">
+                  Innings {inning.inning}
+                </h3>
+
+                <p className="text-lg font-semibold mb-1">
+                  {getTeamName(inning.batting_team)}
+                </p>
+
+                <p className="mb-5 text-gray-700">
+                  {inning.total.runs}/{inning.total.wickets} (
+                  {inning.total.overs} overs)
+                </p>
+
+                {/* Batting */}
+
+                <h4 className="text-lg font-semibold mb-2">
+                  Batting Scorecard
+                </h4>
+
+                <div className="overflow-x-auto">
+
+                  <table className="min-w-full border border-gray-300 text-sm">
+
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="border px-3 py-2 text-left">
+                          Batter
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          R
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          B
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          4s
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          6s
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          SR
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          Dismissal
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+
+                      {inning.batting.map((player) => (
+
+                        <tr key={player.name}>
+
+                          <td className="border px-3 py-2">
+                            {player.name}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {player.runs}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {player.balls}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {player.fours}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {player.sixes}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {player.strike_rate.toFixed(2)}
+                          </td>
+
+                          <td className="border px-3 py-2">
+                            {player.out
+                              ? player.dismissal
+                              : "Not Out"}
+                          </td>
+
+                        </tr>
+
+                      ))}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+                {/* Bowling */}
+
+                <h4 className="text-lg font-semibold mt-8 mb-2">
+                  Bowling Figures
+                </h4>
+
+                <div className="overflow-x-auto">
+
+                  <table className="min-w-full border border-gray-300 text-sm">
+
+                    <thead className="bg-gray-100">
+                      <tr>
+
+                        <th className="border px-3 py-2 text-left">
+                          Bowler
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          Overs
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          Runs
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          Wickets
+                        </th>
+
+                        <th className="border px-3 py-2">
+                          Economy
+                        </th>
+
+                      </tr>
+                    </thead>
+
+                    <tbody>
+
+                      {inning.bowling.map((bowler) => (
+
+                        <tr key={bowler.name}>
+
+                          <td className="border px-3 py-2">
+                            {bowler.name}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {bowler.overs}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {bowler.runs_conceded}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {bowler.wickets}
+                          </td>
+
+                          <td className="border px-3 py-2 text-center">
+                            {bowler.economy.toFixed(2)}
+                          </td>
+
+                        </tr>
+
+                      ))}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </div>
+            ))}
+
+          </div>
+        )}
+
       </div>
     </div>
   );

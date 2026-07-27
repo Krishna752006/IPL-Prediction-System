@@ -1,13 +1,21 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Trophy, History, LogOut, User } from 'lucide-react';
+import { Trophy, History, LogOut, User, Calendar } from 'lucide-react'; // <-- Imported Calendar icon
 import { useAuthStore } from '../store/authStore';
+import { Table } from 'lucide-react'; // Add Table icon
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
+  // Inside src/components/Navbar.tsx (or wherever your Navbar is located)
+
   const handleLogout = () => {
+    // Check if the user is a guest before logging out
+    if (user?.isGuest) {
+      localStorage.removeItem('predictionHistory');
+    }
+
     logout();
     navigate('/login');
   };
@@ -29,6 +37,17 @@ const Navbar = () => {
               <Link to="/predictions" className="hover:text-indigo-200 transition-colors">
                 Predictions
               </Link>
+              
+              <Link to="/schedule" className="hover:text-indigo-200 transition-colors flex items-center space-x-1">
+                <Calendar className="h-4 w-4" />
+                <span>Schedule</span>
+              </Link>
+
+              <Link to="/points-table" className="hover:text-indigo-200 transition-colors flex items-center space-x-1">
+                <Table className="h-4 w-4" />
+                <span>Points Table</span>
+              </Link>
+
               <Link to="/prediction-history" className="hover:text-indigo-200 transition-colors flex items-center space-x-1">
                 <History className="h-4 w-4" />
                 <span>History</span>

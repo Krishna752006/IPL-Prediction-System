@@ -1,44 +1,98 @@
-const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = "http://localhost:8000";
 
-interface PredictionResult {
-  teamA: {
-    score: number;
+export interface BattingScore {
+    name: string;
+    runs: number;
+    balls: number;
+    fours: number;
+    sixes: number;
+    strike_rate: number;
+    out: boolean;
+    dismissal: string;
+}
+
+export interface BowlingScore {
+    name: string;
+    overs: string;
+    runs_conceded: number;
     wickets: number;
-    run_rate: number;
-  };
-  teamB: {
-    score: number;
-    wickets: number;
-    run_rate: number;
-    match_result: string;
-  };
+    economy: number;
+}
+
+export interface Innings {
+    inning: number;
+    batting_team: string;
+    bowling_team: string;
+    target: number;
+    total: {
+        runs: number;
+        wickets: number;
+        overs: string;
+    };
+    batting: BattingScore[];
+    bowling: BowlingScore[];
+}
+
+export interface PredictionResult {
+    tournament_context: {
+        team_a: string;
+        team_b: string;
+        venue: string;
+        toss_winner: string;
+        toss_decision: string;
+    };
+
+    innings: Innings[];
+
+    result: string;
+    winner: string;
+    model_backend: string;
 }
 
 const PredictionModel = {
-  predict: async (teamA: number, teamB: number, venue: number): Promise<PredictionResult | null> => {
-    // Check if teamA and teamB are the same
-    if (teamA === teamB) {
-      console.error('Error: Please provide two different teams as input.');
-      return null;
+    predict: async (
+        teamA: string,
+        teamB: string,
+        venue?: string
+    ): Promise<PredictionResult | null> => {
+
+        if (teamA === teamB)
+            return null;
+
+        try {
+
+            const body: any = {
+                team_a: teamA,
+                team_b: teamB
+            };
+
+            if (venue)
+                body.venue = venue;
+
+            const response = await fetch(
+                `${BASE_URL}/predict-1-match`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(body)
+                }
+            );
+
+            if (!response.ok)
+                throw new Error("Prediction failed");
+
+            return await response.json();
+
+        } catch (err) {
+
+            console.error(err);
+            return null;
+
+        }
+
     }
-
-    try {
-      const response = await fetch(`${BASE_URL}/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ teamA, teamB, venue }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch prediction');
-      }
-
-      return (await response.json()) as PredictionResult;
-    } catch (error) {
-      console.error('Prediction Error:', error);
-      return null;
-    }
-  },
 };
 
 export default PredictionModel;

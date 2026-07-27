@@ -1,0 +1,142 @@
+{
+  "tournament": "Indian Premier League (IPL) 2026",
+  "teams": {
+    "CSK": {
+      "captain": "Ruturaj Gaikwad",
+      "playing_xi": {
+        "1": {"name": "Ruturaj Gaikwad", "overseas": false}, "2": {"name": "Sanju Samson (WK)", "overseas": false}, "3": {"name": "Ayush Mhatre", "overseas": false}, "4": {"name": "Dewald Brevis", "overseas": true},
+        "5": {"name": "Shivam Dube", "overseas": false, "is_pacer": true}, "6": {"name": "Sarfaraz Khan", "overseas": false}, "7": {"name": "MS Dhoni (WK)", "overseas": false}, "8": {"name": "Anshul Kamboj", "overseas": false, "is_pacer": true},
+        "9": {"name": "Matt Henry", "overseas": true, "is_pacer": true}, "10": {"name": "Noor Ahmad", "overseas": true, "is_pacer": false}, "11": {"name": "Gurjapneet Singh", "overseas": false, "is_pacer": true}, "12": {"name": "Spencer Johnson", "overseas": true, "is_pacer": true}
+      },
+      "bench": [
+        {"name": "Aman Hakim Khan", "overseas": false, "is_pacer": true}, {"name": "Matt Short", "overseas": true, "is_pacer": false}, {"name": "Zak Foulkes", "overseas": true, "is_pacer": true}, {"name": "Dian Forrester", "overseas": true, "is_pacer": true}, {"name": "Macneil Noronha", "overseas": false, "is_pacer": false},
+        {"name": "Prashant Veer", "overseas": false, "is_pacer": false}, {"name": "Shreyas Gopal", "overseas": false, "is_pacer": false}, {"name": "Akeal Hosein", "overseas": true, "is_pacer": false}, {"name": "Akash Madhwal", "overseas": false, "is_pacer": true}, {"name": "Mukesh Choudhary", "overseas": false, "is_pacer": true},
+        {"name": "Kuldip Yadav", "overseas": false, "is_pacer": true}, {"name": "Kartik Sharma (WK)", "overseas": false}, {"name": "Urvil Patel (WK)", "overseas": false}, {"name": "Rahul Chahar", "overseas": false, "is_pacer": false}
+      ]
+    },
+    "DC": {
+      "captain": "Axar Patel",
+      "playing_xi": {
+        "1": {"name": "KL Rahul (WK)", "overseas": false}, "2": {"name": "Pathum Nissanka", "overseas": true}, "3": {"name": "Nitish Rana", "overseas": false}, "4": {"name": "Karun Nair", "overseas": false},
+        "5": {"name": "David Miller", "overseas": true}, "6": {"name": "Tristan Stubbs (WK)", "overseas": true}, "7": {"name": "Ashutosh Sharma", "overseas": false}, "8": {"name": "Axar Patel", "overseas": false, "is_pacer": false},
+        "9": {"name": "Mitchell Starc", "overseas": true, "is_pacer": true}, "10": {"name": "Kuldeep Yadav", "overseas": false, "is_pacer": false}, "11": {"name": "Lungi Ngidi", "overseas": true, "is_pacer": true}, "12": {"name": "T. Natarajan", "overseas": false, "is_pacer": true}
+      },
+      "bench": [
+        {"name": "Prithvi Shaw", "overseas": false}, {"name": "Sahil Parakh", "overseas": false}, {"name": "Abishek Porel (WK)", "overseas": false}, {"name": "Ajay Mandal", "overseas": false, "is_pacer": false},
+        {"name": "Rehan Ahmed", "overseas": true, "is_pacer": false}, {"name": "Sameer Rizvi", "overseas": false, "is_pacer": false}, {"name": "Madhav Tiwari", "overseas": false, "is_pacer": true}, {"name": "Auqib Nabi", "overseas": false, "is_pacer": true},
+        {"name": "Dushmantha Chameera", "overseas": true, "is_pacer": true}, {"name": "Kyle Jamieson", "overseas": true, "is_pacer": true}, {"name": "Mukesh Kumar", "overseas": false, "is_pacer": true}, {"name": "Vipraj Nigam", "overseas": false, "is_pacer": false},
+        {"name": "Tripurana Vijay", "overseas": false, "is_pacer": false}
+      ]
+    },
+    "GT": {
+      "captain": "Shubman Gill",
+      "playing_xi": {
+        "1": {"name": "Shubman Gill", "overseas": false}, "2": {"name": "Sai Sudharsan", "overseas": false}, "3": {"name": "Jos Buttler (WK)", "overseas": true}, "4": {"name": "Glenn Phillips", "overseas": true, "is_pacer": false},
+        "5": {"name": "Shahrukh Khan", "overseas": false}, "6": {"name": "Rahul Tewatia", "overseas": false, "is_pacer": false}, "7": {"name": "Jason Holder", "overseas": true, "is_pacer": true}, "8": {"name": "Rashid Khan", "overseas": true, "is_pacer": false},
+        "9": {"name": "Mohammad Siraj", "overseas": false, "is_pacer": true}, "10": {"name": "Kagiso Rabada", "overseas": true, "is_pacer": true}, "11": {"name": "Prasidh Krishna", "overseas": false, "is_pacer": true}, "12": {"name": "R Sai Kishore", "overseas": false, "is_pacer": false}
+      },
+      "bench": [
+        {"name": "Anuj Rawat (WK)", "overseas": false}, {"name": "Connor Esterhuizen", "overseas": true}, {"name": "Kumar Kushagra (WK)", "overseas": false}, {"name": "Washington Sundar", "overseas": false, "is_pacer": false},
+        {"name": "Nishant Sindhu", "overseas": false, "is_pacer": false}, {"name": "Manav Suthar", "overseas": false, "is_pacer": false}, {"name": "Arshad Khan", "overseas": false, "is_pacer": true}, {"name": "Ashok Sharma", "overseas": false, "is_pacer": true},
+        {"name": "Gurnoor Singh Brar", "overseas": false, "is_pacer": true}, {"name": "Kulwant Khejroliya", "overseas": false, "is_pacer": true}, {"name": "Ishant Sharma", "overseas": false, "is_pacer": true}, {"name": "Luke Wood", "overseas": true, "is_pacer": true},
+        {"name": "Jayant Yadav", "overseas": false, "is_pacer": false}
+      ]
+    },
+    "KKR": {
+      "captain": "Ajinkya Rahane", "vice_captain": "Rinku Singh",
+      "playing_xi": {
+        "1": {"name": "Ajinkya Rahane", "overseas": false}, "2": {"name": "Finn Allen", "overseas": true}, "3": {"name": "Angkrish Raghuvanshi", "overseas": false}, "4": {"name": "Cameron Green", "overseas": true, "is_pacer": true},
+        "5": {"name": "Manish Pandey", "overseas": false}, "6": {"name": "Rinku Singh", "overseas": false}, "7": {"name": "Rovman Powell", "overseas": true}, "8": {"name": "Sunil Narine", "overseas": true, "is_pacer": false},
+        "9": {"name": "Varun Chakaravarthy", "overseas": false, "is_pacer": false}, "10": {"name": "Kartik Tyagi", "overseas": false, "is_pacer": true}, "11": {"name": "Vaibhav Arora", "overseas": false, "is_pacer": true}, "12": {"name": "Umran Malik", "overseas": false, "is_pacer": true}
+      },
+      "bench": [
+        {"name": "Ramandeep Singh", "overseas": false}, {"name": "Sarthak Ranjan", "overseas": false}, {"name": "Tim Seifert (WK)", "overseas": true}, {"name": "Luvnith Sisodia (WK)", "overseas": false},
+        {"name": "Rahul Tripathi", "overseas": false}, {"name": "Daksh Kamra", "overseas": false, "is_pacer": false}, {"name": "Anukul Roy", "overseas": false, "is_pacer": false}, {"name": "Saurabh Dubey", "overseas": false, "is_pacer": true}, {"name": "Blessing Muzarabani", "overseas": true, "is_pacer": true},
+        {"name": "Navdeep Saini", "overseas": false, "is_pacer": true}, {"name": "Prashant Solanki", "overseas": false, "is_pacer": false}, {"name": "Rachin Ravindra", "overseas": true, "is_pacer": false}, {"name": "Akash Deep", "overseas": false, "is_pacer": true}, {"name": "Harshit Rana", "overseas": false, "is_pacer": true},
+        {"name": "Mustafizur Rahman", "overseas": true, "is_pacer": true}, {"name": "Tejasvi Dahiya (WK)", "overseas": false}
+      ]
+    },
+    "LSG": {
+      "captain": "Rishabh Pant",
+      "playing_xi": {
+        "1": {"name": "Nicholas Pooran (WK)", "overseas": true}, "2": {"name": "Aiden Markram", "overseas": true}, "3": {"name": "Mitchell Marsh", "overseas": true, "is_pacer": true}, "4": {"name": "Rishabh Pant (WK)", "overseas": false},
+        "5": {"name": "Ayush Badoni", "overseas": false}, "6": {"name": "Abdul Samad", "overseas": false}, "7": {"name": "Shahbaz Ahmed", "overseas": false, "is_pacer": false}, "8": {"name": "Mohammad Shami", "overseas": false, "is_pacer": true},
+        "9": {"name": "Prince Yadav", "overseas": false, "is_pacer": true}, "10": {"name": "Mayank Yadav", "overseas": false, "is_pacer": true}, "11": {"name": "Anrich Nortje", "overseas": true, "is_pacer": true}, "12": {"name": "Digvesh Rathi", "overseas": false, "is_pacer": false}
+      },
+      "bench": [
+        {"name": "Akshat Raghuwanshi", "overseas": false}, {"name": "Matthew Breetzke", "overseas": true}, {"name": "Mukul Choudhary (WK)", "overseas": false}, {"name": "Himmat Singh", "overseas": false}, {"name": "Josh Inglis (WK)", "overseas": true},
+        {"name": "Arshin Kulkarni", "overseas": false, "is_pacer": true}, {"name": "George Linde", "overseas": true, "is_pacer": false}, {"name": "Akash Singh", "overseas": false, "is_pacer": true}, {"name": "Avesh Khan", "overseas": false, "is_pacer": true}, {"name": "Mohsin Khan", "overseas": false, "is_pacer": true},
+        {"name": "Manimaran Siddharth", "overseas": false, "is_pacer": false}, {"name": "Arjun Tendulkar", "overseas": false, "is_pacer": true}, {"name": "Naman Tiwari", "overseas": false, "is_pacer": true}, {"name": "Wanindu Hasaranga de Silva", "overseas": true, "is_pacer": false}
+      ]
+    },
+    "MI": {
+      "captain": "Hardik Pandya",
+      "playing_xi": {
+        "1": {"name": "Rohit Sharma", "overseas": false}, "2": {"name": "Ryan Rickelton (WK)", "overseas": true}, "3": {"name": "Surya Kumar Yadav", "overseas": false}, "4": {"name": "Tilak Varma", "overseas": false, "is_pacer": false},
+        "5": {"name": "Naman Dhir", "overseas": false, "is_pacer": false}, "6": {"name": "Hardik Pandya", "overseas": false, "is_pacer": true}, "7": {"name": "Sherfane Rutherford", "overseas": true, "is_pacer": true}, "8": {"name": "Shardul Thakur", "overseas": false, "is_pacer": true},
+        "9": {"name": "Jasprit Bumrah", "overseas": false, "is_pacer": true}, "10": {"name": "Allah Ghazanfar", "overseas": true, "is_pacer": false}, "11": {"name": "Deepak Chahar", "overseas": false, "is_pacer": true}, "12": {"name": "Trent Boult", "overseas": true, "is_pacer": true}
+      },
+      "bench": [
+        {"name": "Will Jacks", "overseas": true, "is_pacer": false}, {"name": "Corbin Bosch", "overseas": true, "is_pacer": true}, {"name": "Quinton de Kock (WK)", "overseas": true}, {"name": "Ashwani Kumar", "overseas": false, "is_pacer": true},
+        {"name": "Keshav Maharaj", "overseas": true, "is_pacer": false}, {"name": "Mayank Markande", "overseas": false, "is_pacer": false}, {"name": "Raghu Sharma", "overseas": false, "is_pacer": false}, {"name": "Mohd Izhar", "overseas": false, "is_pacer": true},
+        {"name": "Krish Bhagat", "overseas": false, "is_pacer": true}, {"name": "Robin Minz (WK)", "overseas": false}, {"name": "Raj Angad Bawa", "overseas": false, "is_pacer": true}, {"name": "Mayank Rawat", "overseas": false, "is_pacer": false}, {"name": "Danish Malewar", "overseas": false}
+      ]
+    },
+    "PBKS": {
+      "captain": "Shreyas Iyer",
+      "playing_xi": {
+        "1": {"name": "Priyansh Arya", "overseas": false}, "2": {"name": "Prabhsimran Singh (WK)", "overseas": false}, "3": {"name": "Cooper Connolly", "overseas": true, "is_pacer": false}, "4": {"name": "Shreyas Iyer", "overseas": false},
+        "5": {"name": "Marcus Stoinis", "overseas": true, "is_pacer": true}, "6": {"name": "Shashank Singh", "overseas": false, "is_pacer": false}, "7": {"name": "Marco Jansen", "overseas": true, "is_pacer": true}, "8": {"name": "Arshdeep Singh", "overseas": false, "is_pacer": true},
+        "9": {"name": "Yuzvendra Chahal", "overseas": false, "is_pacer": false}, "10": {"name": "Xavier Bartlett", "overseas": true, "is_pacer": true}, "11": {"name": "Lockie Ferguson", "overseas": true, "is_pacer": true}, "12": {"name": "Harpreet Brar", "overseas": false, "is_pacer": false}
+      },
+      "bench": [
+        {"name": "Pyla Avinash", "overseas": false}, {"name": "Harnoor Singh", "overseas": false}, {"name": "Vishnu Vinod (WK)", "overseas": false}, {"name": "Azmatullah Omarzai", "overseas": true, "is_pacer": true},
+        {"name": "Nehal Wadhera", "overseas": false}, {"name": "Musheer Khan", "overseas": false, "is_pacer": false}, {"name": "Mitchell Owen", "overseas": true, "is_pacer": true}, {"name": "Suryansh Shedge", "overseas": false, "is_pacer": true},
+        {"name": "Praveen Dubey", "overseas": false, "is_pacer": false}, {"name": "Ben Dwarshuis", "overseas": true, "is_pacer": true}, {"name": "Vishal Nishad", "overseas": false, "is_pacer": false}, {"name": "Vijaykumar Vyshak", "overseas": false, "is_pacer": true},
+        {"name": "Yash Thakur", "overseas": false, "is_pacer": true}
+      ]
+    },
+    "RR": {
+      "captain": "Riyan Parag",
+      "playing_xi": {
+        "1": {"name": "Yashasvi Jaiswal", "overseas": false}, "2": {"name": "Vaibhav Suryavanshi", "overseas": false}, "3": {"name": "Riyan Parag", "overseas": false}, "4": {"name": "Shimron Hetmyer", "overseas": true},
+        "5": {"name": "Dhruv Jurel (WK)", "overseas": false}, "6": {"name": "Ravindra Jadeja", "overseas": false, "is_pacer": false}, "7": {"name": "Dasun Shanaka", "overseas": true, "is_pacer": true}, "8": {"name": "Jofra Archer", "overseas": true, "is_pacer": true},
+        "9": {"name": "Sandeep Sharma", "overseas": false, "is_pacer": true}, "10": {"name": "Ravi Bishnoi", "overseas": false, "is_pacer": false}, "11": {"name": "Kwena Maphaka", "overseas": true, "is_pacer": true}, "12": {"name": "Tushar Deshpande", "overseas": false, "is_pacer": true}
+      },
+      "bench": [
+        {"name": "Aman Rao", "overseas": false}, {"name": "Shubham Dubey", "overseas": false}, {"name": "Lhuan-dre Pretorius (WK)", "overseas": true}, {"name": "Emanjot Singh Chahal", "overseas": false, "is_pacer": false},
+        {"name": "Donovan Ferreira", "overseas": true, "is_pacer": false}, {"name": "Brijesh Sharma", "overseas": false, "is_pacer": true}, {"name": "Nandre Burger", "overseas": true, "is_pacer": true}, {"name": "Adam Milne", "overseas": true, "is_pacer": true},
+        {"name": "Sushant Mishra", "overseas": false, "is_pacer": true}, {"name": "Vignesh Puthur", "overseas": false, "is_pacer": false}, {"name": "Kuldeep Sen", "overseas": false, "is_pacer": true}, {"name": "Yash Raj Punja", "overseas": false, "is_pacer": false},
+        {"name": "Yudhvir Singh", "overseas": false, "is_pacer": true}, {"name": "Sam Curran", "overseas": true, "is_pacer": true}
+      ]
+    },
+    "RCB": {
+      "captain": "Rajat Patidar",
+      "playing_xi": {
+        "1": {"name": "Phil Salt (WK)", "overseas": true}, "2": {"name": "Virat Kohli", "overseas": false}, "3": {"name": "Rajat Patidar", "overseas": false}, "4": {"name": "Devdutt Padikkal", "overseas": false},
+        "5": {"name": "Tim David", "overseas": true}, "6": {"name": "Jitesh Sharma (WK)", "overseas": false}, "7": {"name": "Krunal Pandya", "overseas": false, "is_pacer": false}, "8": {"name": "Bhuvneshwar Kumar", "overseas": false, "is_pacer": true},
+        "9": {"name": "Josh Hazlewood", "overseas": true, "is_pacer": true}, "10": {"name": "Suyash Sharma", "overseas": false, "is_pacer": false}, "11": {"name": "Swapnil Singh", "overseas": false, "is_pacer": false}, "12": {"name": "Jacob Duffy", "overseas": true, "is_pacer": true}
+      },
+      "bench": [
+        {"name": "Jordan Cox (WK)", "overseas": true}, {"name": "Jacob Bethell", "overseas": true, "is_pacer": false}, {"name": "Kanishk Chouhan", "overseas": false, "is_pacer": false}, {"name": "Venkatesh Iyer", "overseas": false, "is_pacer": true},
+        {"name": "Vihaan Malhotra", "overseas": false, "is_pacer": false}, {"name": "Mangesh Yadav", "overseas": false, "is_pacer": true}, {"name": "Abhinandan Singh", "overseas": false, "is_pacer": true}, {"name": "Satvik Deswal", "overseas": false, "is_pacer": false},
+        {"name": "Romario Shepherd", "overseas": true, "is_pacer": true}, {"name": "Richard Gleeson", "overseas": true, "is_pacer": true}, {"name": "Vicky Ostwal", "overseas": false, "is_pacer": false}, {"name": "Rasikh Salam", "overseas": false, "is_pacer": true}, 
+        {"name": "Nuwan Thushara", "overseas": true, "is_pacer": true}, {"name": "Yash Dayal", "overseas": false, "is_pacer": true}
+      ]
+    },
+    "SRH": {
+      "captain": "Pat Cummins",
+      "playing_xi": {
+        "1": {"name": "Travis Head", "overseas": true}, "2": {"name": "Abhishek Sharma", "overseas": false, "is_pacer": false}, "3": {"name": "Ishan Kishan (WK)", "overseas": false}, "4": {"name": "Heinrich Klaasen (WK)", "overseas": true},
+        "5": {"name": "Nitish Kumar Reddy", "overseas": false, "is_pacer": true}, "6": {"name": "Aniket Verma", "overseas": false}, "7": {"name": "Salil Arora (WK)", "overseas": false}, "8": {"name": "Pat Cummins", "overseas": true, "is_pacer": true},
+        "9": {"name": "Eshan Malinga", "overseas": true, "is_pacer": true}, "10": {"name": "Praful Hinge", "overseas": false, "is_pacer": true}, "11": {"name": "Sakib Hussain", "overseas": false, "is_pacer": true}, "12": {"name": "Zeeshan Ansari", "overseas": false, "is_pacer": false}
+      },
+      "bench": [
+        {"name": "Harshal Patel", "overseas": false, "is_pacer": true}, {"name": "Ravichandran Smaran", "overseas": false}, {"name": "RS Ambrish", "overseas": false, "is_pacer": true}, {"name": "Harsh Dubey", "overseas": false, "is_pacer": false}, {"name": "Krains Fuletra", "overseas": false, "is_pacer": false},
+        {"name": "Liam Livingstone", "overseas": true, "is_pacer": false}, {"name": "Kamindu Mendis", "overseas": true, "is_pacer": false}, {"name": "Shivang Kumar", "overseas": false, "is_pacer": false}, {"name": "Amit Kumar", "overseas": false, "is_pacer": false}, {"name": "Gerald Coetzee", "overseas": true, "is_pacer": true},
+        {"name": "Dilshan Madushanka", "overseas": true, "is_pacer": true}, {"name": "Jaydev Unadkat", "overseas": false, "is_pacer": true}, {"name": "Onkar Tarmale", "overseas": false, "is_pacer": true}, {"name": "Jack Edwards", "overseas": false, "is_pacer": true},
+        {"name": "Shivam Mavi", "overseas": false, "is_pacer": true}, {"name": "David Payne", "overseas": true, "is_pacer": true}
+      ]
+    }
+  }
+}

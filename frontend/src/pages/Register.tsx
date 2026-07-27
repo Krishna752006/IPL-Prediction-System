@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import API from "../api/authApi";
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -12,7 +13,6 @@ const Register = () => {
   const [error, setError] = useState('');
   
   const navigate = useNavigate();
-  const login = useAuthStore((state) => state.login);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,16 +23,26 @@ const Register = () => {
       return;
     }
 
-    // In a real app, you would make an API call here
-    const mockUser = {
-      id: Math.random().toString(36).substr(2, 9),
-      email,
+  try {
+    const response = await API.post("/register", {
       name,
-      role: userType as 'user' | 'business'
-    };
-
-    login(mockUser);
-    navigate('/');
+      email,
+      password,
+      role: userType
+    });
+    if (response.data.success) {
+      alert("Registration Successful!");
+      navigate("/login");
+  } else { setError(response.data.message); }
+  } catch (err: any) {
+    if (err.response?.data?.detail) {
+      setError(err.response.data.detail);
+    } else if (err.response?.data?.message) {
+      setError(err.response.data.message);
+    } else {
+      setError("Something went wrong. Please try again.");
+    }
+  }
   };
 
   return (

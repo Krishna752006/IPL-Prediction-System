@@ -1,0 +1,33 @@
+experiment:
+  name: ipl_tabtransformer_lstm
+
+data:
+  path: data/processed/V1/features.parquet
+  players_json: ../New Data/data/all_players.json
+  venues_json: ../New Data/data/all_venues.json
+  batter_classification: data/classification/batter_classification.json
+  bowler_classification: data/classification/bowler_classification.json
+  dataset_version: V1
+  feature_version: tabtransformer_v1
+  sequence_length: 30
+  target_year: 2025
+
+model:
+  epochs: 1
+  batch_size: 2000
+  learning_rate: 0.01
+  weight_decay: 0.0001
+  noise_std: 0.05
+  early_stop_patience: 5
+
+validation_gate:
+  test_mae: 25.0
+  test_r2: 0.10
+  wicket_auc: 0.55
+  wide_auc: 0.55
+
+paths:
+  staging_dir: models/staging
+  production_dir: models/production
+  mlflow_db: sqlite:///mlflow.db
+  embeddings_json: saved_seasons
