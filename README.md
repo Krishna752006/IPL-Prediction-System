@@ -59,10 +59,3 @@ mlflow ui --backend-store-uri sqlite:///experiments/mlruns.db --port 5000
 ```
 
 This launches the MLflow UI on `localhost:5000`.
-
-## Team Members
-
-- [@Krishna Chaitanya](https://github.com/Krishna752006)
-- [@Guru Charan](https://github.com/gcrn2318)
-- [@Lokesh](https://github.com/LokeshVasireddy)
-- [@Gnana Aasrith](https://github.com/AASRITHCODER)
