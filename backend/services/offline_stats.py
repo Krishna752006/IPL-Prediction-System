@@ -14,6 +14,7 @@ If the file doesn't exist (it isn't part of what you've given me), every
 lookup returns the neutral index 1.0 (== "scores at the league-average
 rate for this phase"), with a single startup warning instead of crashing.
 """
+
 from __future__ import annotations
 
 import ast

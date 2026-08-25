@@ -20,6 +20,7 @@ Assumptions (no signal in the data to do otherwise):
     selection]".
   - Wicketkeeper is inferred from a "(WK)" suffix in the name.
 """
+
 from __future__ import annotations
 
 import json
@@ -50,7 +51,9 @@ class Team:
     code: str
     captain: str
     batting_order: list[Player] = field(default_factory=list)  # 11, slot order
-    bowling_only_player: Player | None = None  # slot 12 — never bats, see module docstring
+    bowling_only_player: Player | None = (
+        None  # slot 12 — never bats, see module docstring
+    )
     bench: list[Player] = field(default_factory=list)
 
     @property

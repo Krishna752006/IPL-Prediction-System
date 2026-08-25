@@ -1,30 +1,28 @@
 import argparse
 import json
 import math
+import os
 import random
 import shutil
-
-from mlflow.models import infer_signature
 
 # from tqdm.keras import TqdmCallback
 import mlflow
 import mlflow.tensorflow
 import numpy as np
 import pandas as pd
-import os
 import tensorflow as tf
-
 from core.config_loader import load_config
 from core.logger import setup_logger
 from core.model_bundle import IPLModelBundle
 from core.registry import promote_model
+from mlflow.models import infer_signature
 from sklearn.metrics import (
-    r2_score,
     accuracy_score,
-    precision_score,
-    recall_score,
     f1_score,
-    matthews_corrcoef
+    matthews_corrcoef,
+    precision_score,
+    r2_score,
+    recall_score,
 )
 from tensorflow import keras
 
@@ -80,19 +78,49 @@ LSTM_DROPOUT = config["model"].get("lstm_dropout", 0.0)
 LSTM_RECURRENT_DROPOUT = config["model"].get("lstm_recurrent_dropout", 0.0)
 
 feature_columns = [
-    "inning", "over", "total_balls", "balls_remaining", "phase_pp",
-    "phase_middle", "phase_death", "target", "is_pacer",
-    "wickets_before", "percentage_target_achieved", "current_run_rate",
-    "required_run_rate", "sin_ball", "cos_ball", "rr_momentum",
-    "toss_won", "venue_phase_avg", "batter_history_matches",
-    "last_1_runs", "last_1_balls", "last_2_runs", "last_2_balls",
-    "last_3_runs", "last_3_balls", "bowler_history_matches",
-    "last_1_runs_conceded", "last_1_balls_bowled", "last_2_runs_conceded",
-    "last_2_balls_bowled", "last_3_runs_conceded", "last_3_balls_bowled"
+    "inning",
+    "over",
+    "total_balls",
+    "balls_remaining",
+    "phase_pp",
+    "phase_middle",
+    "phase_death",
+    "target",
+    "is_pacer",
+    "wickets_before",
+    "percentage_target_achieved",
+    "current_run_rate",
+    "required_run_rate",
+    "sin_ball",
+    "cos_ball",
+    "rr_momentum",
+    "toss_won",
+    "venue_phase_avg",
+    "batter_history_matches",
+    "last_1_runs",
+    "last_1_balls",
+    "last_2_runs",
+    "last_2_balls",
+    "last_3_runs",
+    "last_3_balls",
+    "bowler_history_matches",
+    "last_1_runs_conceded",
+    "last_1_balls_bowled",
+    "last_2_runs_conceded",
+    "last_2_balls_bowled",
+    "last_3_runs_conceded",
+    "last_3_balls_bowled",
 ]
 
+
 def get_lstm_layer(units, return_sequences=False):
-    return keras.layers.LSTM(units=units, return_sequences=return_sequences, dropout=LSTM_DROPOUT, recurrent_dropout=LSTM_RECURRENT_DROPOUT )
+    return keras.layers.LSTM(
+        units=units,
+        return_sequences=return_sequences,
+        dropout=LSTM_DROPOUT,
+        recurrent_dropout=LSTM_RECURRENT_DROPOUT,
+    )
+
 
 random.seed(SEED)
 np.random.seed(SEED)
@@ -105,11 +133,14 @@ SCORE_SCALE = 180.0
 WICKET_THRESH = config["model"].get("wicket_threshold", 0.5)
 WIDE_THRESH = config["model"].get("wide_threshold", 0.5)
 
+
 def scaled_mse(y_true, y_pred):
     return tf.reduce_mean(tf.square((y_true * SCORE_SCALE) - (y_pred * SCORE_SCALE)))
 
+
 def scaled_rmse(y_true, y_pred):
     return tf.sqrt(scaled_mse(y_true, y_pred))
+
 
 def scaled_r2(y_true, y_pred):
     y_t = y_true * SCORE_SCALE
@@ -118,43 +149,46 @@ def scaled_r2(y_true, y_pred):
     ss_tot = tf.reduce_sum(tf.square(y_t - tf.reduce_mean(y_t)))
     return 1.0 - (ss_res / (ss_tot + tf.keras.backend.epsilon()))
 
+
 def wicket_mcc(y_true, y_pred):
     y_t = tf.cast(y_true, tf.float32)
     # Apply sigmoid since the loss uses from_logits=True
-    y_p = tf.cast(tf.math.sigmoid(y_pred) > WICKET_THRESH, tf.float32) 
-    
+    y_p = tf.cast(tf.math.sigmoid(y_pred) > WICKET_THRESH, tf.float32)
+
     tp = tf.reduce_sum(y_t * y_p)
     tn = tf.reduce_sum((1.0 - y_t) * (1.0 - y_p))
     fp = tf.reduce_sum((1.0 - y_t) * y_p)
     fn = tf.reduce_sum(y_t * (1.0 - y_p))
-    
+
     num = (tp * tn) - (fp * fn)
     den = tf.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
     return tf.math.divide_no_nan(num, den)
 
+
 def wide_mcc(y_true, y_pred):
     y_t = tf.cast(y_true, tf.float32)
     y_p = tf.cast(tf.math.sigmoid(y_pred) > WIDE_THRESH, tf.float32)
-    
+
     tp = tf.reduce_sum(y_t * y_p)
     tn = tf.reduce_sum((1.0 - y_t) * (1.0 - y_p))
     fp = tf.reduce_sum((1.0 - y_t) * y_p)
     fn = tf.reduce_sum(y_t * (1.0 - y_p))
-    
+
     num = (tp * tn) - (fp * fn)
     den = tf.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
     return tf.math.divide_no_nan(num, den)
+
 
 class BatchMetricsPrinter(keras.callbacks.Callback):
     def on_train_batch_end(self, batch, logs=None):
         logs = logs or {}
         # Pull batch metrics
-        score_mse = logs.get('score_scaled_mse', 0.0)
-        score_rmse = logs.get('score_scaled_rmse', 0.0)
-        score_r2 = logs.get('score_scaled_r2', 0.0)
-        wicket_mcc_val = logs.get('wicket_wicket_mcc', 0.0)
-        wide_mcc_val = logs.get('wide_wide_mcc', 0.0)
-        
+        score_mse = logs.get("score_scaled_mse", 0.0)
+        score_rmse = logs.get("score_scaled_rmse", 0.0)
+        score_r2 = logs.get("score_scaled_r2", 0.0)
+        wicket_mcc_val = logs.get("wicket_wicket_mcc", 0.0)
+        wide_mcc_val = logs.get("wide_wide_mcc", 0.0)
+
         # Print directly to terminal on a single uncluttered line
         print(
             f"Batch {batch + 1:03d} | "
@@ -164,6 +198,7 @@ class BatchMetricsPrinter(keras.callbacks.Callback):
             f"Wicket MCC: {wicket_mcc_val:.3f} | "
             f"Wide MCC: {wide_mcc_val:.3f}"
         )
+
 
 def transform_features_with_temporal_embeddings(df, embeddings_dir):
     logger.info(
@@ -196,14 +231,22 @@ def transform_features_with_temporal_embeddings(df, embeddings_dir):
             )
             continue
 
-        logger.info(f"Applying {json_filename} to {mask.sum()} rows from the {int(season)} season.")
+        logger.info(
+            f"Applying {json_filename} to {mask.sum()} rows from the {int(season)} season."
+        )
 
         with open(json_path, "r") as f:
             embeds = json.load(f)
 
-        batter_map = {k: v["batter_embedding"] for k, v in embeds.get("players", {}).items()}
-        non_striker_map = {k: v["non_striker_embedding"] for k, v in embeds.get("players", {}).items()}
-        bowler_map = {k: v["bowler_embedding"] for k, v in embeds.get("players", {}).items()}
+        batter_map = {
+            k: v["batter_embedding"] for k, v in embeds.get("players", {}).items()
+        }
+        non_striker_map = {
+            k: v["non_striker_embedding"] for k, v in embeds.get("players", {}).items()
+        }
+        bowler_map = {
+            k: v["bowler_embedding"] for k, v in embeds.get("players", {}).items()
+        }
         venue_map = embeds.get("venues", {})
         season_map = embeds.get("season", {})
         match_state_list = embeds.get("match_state", [])
@@ -211,14 +254,27 @@ def transform_features_with_temporal_embeddings(df, embeddings_dir):
         def fetch_vec(mapping, keys, default_dim):
             return np.array([mapping.get(str(k), [0.0] * default_dim) for k in keys])
 
-        b_vectors[mask] = fetch_vec(batter_map, season_df.get("batsman", [None] * len(season_df)), p_dim)
-        ns_vectors[mask] = fetch_vec(non_striker_map, season_df.get("non_striker", [None] * len(season_df)), p_dim)
-        bw_vectors[mask] = fetch_vec(bowler_map, season_df.get("bowler", [None] * len(season_df)), p_dim)
-        v_vectors[mask] = fetch_vec(venue_map, season_df.get("venue", [None] * len(season_df)), v_dim)
+        b_vectors[mask] = fetch_vec(
+            batter_map, season_df.get("batsman", [None] * len(season_df)), p_dim
+        )
+        ns_vectors[mask] = fetch_vec(
+            non_striker_map,
+            season_df.get("non_striker", [None] * len(season_df)),
+            p_dim,
+        )
+        bw_vectors[mask] = fetch_vec(
+            bowler_map, season_df.get("bowler", [None] * len(season_df)), p_dim
+        )
+        v_vectors[mask] = fetch_vec(
+            venue_map, season_df.get("venue", [None] * len(season_df)), v_dim
+        )
         s_vectors[mask] = fetch_vec(
-            season_map, 
-            [int(float(x)) if pd.notna(x) else None for x in season_df.get("season", [None] * len(season_df))], 
-            s_dim
+            season_map,
+            [
+                int(float(x)) if pd.notna(x) else None
+                for x in season_df.get("season", [None] * len(season_df))
+            ],
+            s_dim,
         )
 
         if "match_state_id" in season_df.columns:
@@ -232,7 +288,7 @@ def transform_features_with_temporal_embeddings(df, embeddings_dir):
                     for x in season_df["match_state_id"]
                 ]
             )
-    
+
     valid_features = [col for col in feature_columns if col in df.columns]
     numerical_matrix = df[valid_features].fillna(0).values.astype(np.float32)
 
@@ -249,6 +305,7 @@ def transform_features_with_temporal_embeddings(df, embeddings_dir):
     )
 
     return X_engineered
+
 
 logger.info("Loading dataset")
 logger.info(f"Dataset path: {DATA_PATH}")
@@ -291,17 +348,40 @@ test_matches = matches_2025[midpoint:]
 val_idx = df_2025[df_2025["matchId"].isin(val_matches)].index.to_numpy()
 test_idx = df_2025[df_2025["matchId"].isin(test_matches)].index.to_numpy()
 
-y_train = {"score": y_raw[train_idx, 0], "wicket": y_raw[train_idx, 1], "wide": y_raw[train_idx, 2]}
-y_val = {"score": y_raw[val_idx, 0], "wicket": y_raw[val_idx, 1], "wide": y_raw[val_idx, 2]}
-y_test = {"score": y_raw[test_idx, 0], "wicket": y_raw[test_idx, 1], "wide": y_raw[test_idx, 2]}
+y_train = {
+    "score": y_raw[train_idx, 0],
+    "wicket": y_raw[train_idx, 1],
+    "wide": y_raw[train_idx, 2],
+}
+y_val = {
+    "score": y_raw[val_idx, 0],
+    "wicket": y_raw[val_idx, 1],
+    "wide": y_raw[val_idx, 2],
+}
+y_test = {
+    "score": y_raw[test_idx, 0],
+    "wicket": y_raw[test_idx, 1],
+    "wide": y_raw[test_idx, 2],
+}
 
 logger.info("Data split completed via indices")
 logger.info(f"Train size: {len(train_idx)}")
 logger.info(f"Val size: {len(val_idx)}")
 logger.info(f"Test size: {len(test_idx)}")
 
+
 class IPLDataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, X_raw, y_raw, seq_starts, indices, batch_size, seq_len=30, shuffle=True, **kwargs):
+    def __init__(
+        self,
+        X_raw,
+        y_raw,
+        seq_starts,
+        indices,
+        batch_size,
+        seq_len=30,
+        shuffle=True,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.X_raw = X_raw
         self.y_raw = y_raw
@@ -316,35 +396,48 @@ class IPLDataGenerator(tf.keras.utils.Sequence):
         return math.ceil(len(self.indices) / self.batch_size)
 
     def __getitem__(self, idx):
-        batch_indices = self.indices[idx * self.batch_size : (idx + 1) * self.batch_size]
-        
-        X_batch = np.zeros((len(batch_indices), self.seq_len, self.X_raw.shape[1]), dtype=np.float32)
+        batch_indices = self.indices[
+            idx * self.batch_size : (idx + 1) * self.batch_size
+        ]
+
+        X_batch = np.zeros(
+            (len(batch_indices), self.seq_len, self.X_raw.shape[1]), dtype=np.float32
+        )
         y_score = np.zeros(len(batch_indices), dtype=np.float32)
         y_wicket = np.zeros(len(batch_indices), dtype=np.float32)
         y_wide = np.zeros(len(batch_indices), dtype=np.float32)
-        
+
         for b_idx, i in enumerate(batch_indices):
             start = self.seq_starts[i]
             seq = self.X_raw[start : i + 1]
-            
+
             if len(seq) < self.seq_len:
-                pad = np.zeros((self.seq_len - len(seq), self.X_raw.shape[1]), dtype=np.float32)
+                pad = np.zeros(
+                    (self.seq_len - len(seq), self.X_raw.shape[1]), dtype=np.float32
+                )
                 seq = np.vstack([pad, seq])
-                
+
             X_batch[b_idx] = seq
             y_score[b_idx] = self.y_raw[i, 0]
             y_wicket[b_idx] = self.y_raw[i, 1]
             y_wide[b_idx] = self.y_raw[i, 2]
-            
+
         return X_batch, {"score": y_score, "wicket": y_wicket, "wide": y_wide}
 
     def on_epoch_end(self):
         if self.shuffle:
             np.random.shuffle(self.indices)
 
-train_gen = IPLDataGenerator(X_raw, y_raw, seq_starts, train_idx, BATCH_SIZE, SEQ_LEN, shuffle=True)
-val_gen = IPLDataGenerator(X_raw, y_raw, seq_starts, val_idx, BATCH_SIZE, SEQ_LEN, shuffle=False)
-test_gen = IPLDataGenerator(X_raw, y_raw, seq_starts, test_idx, BATCH_SIZE, SEQ_LEN, shuffle=False)
+
+train_gen = IPLDataGenerator(
+    X_raw, y_raw, seq_starts, train_idx, BATCH_SIZE, SEQ_LEN, shuffle=True
+)
+val_gen = IPLDataGenerator(
+    X_raw, y_raw, seq_starts, val_idx, BATCH_SIZE, SEQ_LEN, shuffle=False
+)
+test_gen = IPLDataGenerator(
+    X_raw, y_raw, seq_starts, test_idx, BATCH_SIZE, SEQ_LEN, shuffle=False
+)
 
 with mlflow.start_run():
     try:
@@ -374,7 +467,9 @@ with mlflow.start_run():
         mlflow.log_param("config_file", args.config)
         mlflow.log_artifact(EMBEDDINGS_DIR)
 
-        logger.info(f"Building legacy light-weight structural {MODEL_TYPE} architecture")
+        logger.info(
+            f"Building legacy light-weight structural {MODEL_TYPE} architecture"
+        )
 
         num_numerical_features = len(feature_columns)
         inputs = keras.layers.Input(shape=(SEQ_LEN, X_raw.shape[1]))
@@ -392,7 +487,7 @@ with mlflow.start_run():
         shared_mlp = keras.layers.Dense(DENSE2, activation="relu")(shared_mlp)
 
         wicket_lstm_out = get_lstm_layer(64, return_sequences=False)(combined)
-        
+
         score_head1 = keras.layers.Dense(128, activation="relu")(shared_mlp)
         score_head1 = keras.layers.Dropout(0.2)(score_head1)
         score_head2 = keras.layers.Dense(64, activation="relu")(score_head1)
@@ -400,7 +495,7 @@ with mlflow.start_run():
         score_head3 = keras.layers.Dense(32, activation="relu")(score_head2)
         score_head3 = keras.layers.Dropout(0.2)(score_head3)
         score_output = keras.layers.Dense(1, name="score")(score_head3)
-        
+
         wicket_head1 = keras.layers.Dense(64, activation="relu")(wicket_lstm_out)
         wicket_head1 = keras.layers.Dropout(0.2)(wicket_head1)
         wicket_head2 = keras.layers.Dense(32, activation="relu")(wicket_head1)
@@ -408,14 +503,16 @@ with mlflow.start_run():
         wicket_head3 = keras.layers.Dense(16, activation="relu")(wicket_head2)
         wicket_head3 = keras.layers.Dropout(0.2)(wicket_head3)
         wicket_output = keras.layers.Dense(1, name="wicket")(wicket_head3)
-        
+
         wide_head1 = keras.layers.Dense(48, activation="relu")(shared_mlp)
         wide_head1 = keras.layers.Dropout(0.2)(wide_head1)
         wide_head2 = keras.layers.Dense(16, activation="relu")(wide_head1)
         wide_head2 = keras.layers.Dropout(0.2)(wide_head2)
         wide_output = keras.layers.Dense(1, name="wide")(wide_head2)
-        
-        model = keras.Model(inputs=inputs, outputs=[score_output, wicket_output, wide_output])
+
+        model = keras.Model(
+            inputs=inputs, outputs=[score_output, wicket_output, wide_output]
+        )
 
         optimizer = keras.optimizers.Adam(learning_rate=LEARNING_RATE)
 
@@ -441,7 +538,7 @@ with mlflow.start_run():
             epochs=EPOCHS,
             validation_data=val_gen,
             verbose=0,
-            callbacks=[BatchMetricsPrinter()]
+            callbacks=[BatchMetricsPrinter()],
         )
 
         logger.info("Training completed")
@@ -465,6 +562,7 @@ with mlflow.start_run():
 
         with open(save_path, "wb") as f:
             import pickle
+
             pickle.dump(bundle, f)
 
         logger.info(f"Model saved to staging area: {save_path}")
@@ -478,14 +576,14 @@ with mlflow.start_run():
         mlflow.log_metric("val_mae", history.history["val_score_mae"][-1])
 
         test_results = model.evaluate(test_gen, verbose=0, return_dict=True)
-        
+
         logger.info(f"Test results evaluation context: {test_results}")
         y_test_pred = model.predict(test_gen)
 
         y_val_pred = model.predict(val_gen)
         val_score_preds = y_val_pred[0].flatten()
         val_r2_val = r2_score(y_val["score"], val_score_preds)
-        
+
         n, p = len(val_idx), X_raw.shape[1]
         adjusted_r2 = 1 - (1 - val_r2_val) * (n - 1) / (n - p - 1)
         mlflow.log_metric("val_r2_real", val_r2_val)
@@ -493,23 +591,25 @@ with mlflow.start_run():
 
         test_score_preds = y_test_pred[0].flatten() * 180
         y_test_score_scaled = y_test["score"] * 180
-        
+
         test_r2_val = r2_score(y_test_score_scaled, test_score_preds)
         test_n, test_p = len(test_idx), X_raw.shape[1]
         test_adjusted_r2 = 1 - (1 - test_r2_val) * (test_n - 1) / (test_n - test_p - 1)
         mae = np.mean(np.abs(test_score_preds - y_test_score_scaled))
-        mse = np.mean((test_score_preds - y_test_score_scaled)**2)
+        mse = np.mean((test_score_preds - y_test_score_scaled) ** 2)
         rmse = np.sqrt(mse)
-        
+
         mean_true, mean_pred = np.mean(y_test_score_scaled), np.mean(test_score_preds)
         var_true, var_pred = np.var(y_test_score_scaled), np.var(test_score_preds)
-        cov = np.mean((y_test_score_scaled - mean_true) * (test_score_preds - mean_pred))
-        ccc = (2 * cov) / (var_true + var_pred + (mean_true - mean_pred)**2 + 1e-8)
-        
+        cov = np.mean(
+            (y_test_score_scaled - mean_true) * (test_score_preds - mean_pred)
+        )
+        ccc = (2 * cov) / (var_true + var_pred + (mean_true - mean_pred) ** 2 + 1e-8)
+
         bias = np.mean(test_score_preds - y_test_score_scaled)
         within_10 = np.mean(np.abs(test_score_preds - y_test_score_scaled) <= 10) * 100
         within_20 = np.mean(np.abs(test_score_preds - y_test_score_scaled) <= 20) * 100
-        
+
         mlflow.log_metric("test_loss", test_results["loss"])
         mlflow.log_metric("test_mae_runs", mae)
         mlflow.log_metric("test_mse_runs", mse)
@@ -532,16 +632,37 @@ with mlflow.start_run():
 
         test_wicket_preds = (test_wicket_probs > wicket_thresh).astype(float)
         test_wide_preds = (test_wide_probs > wide_thresh).astype(float)
-        
-        mlflow.log_metric("test_wicket_precision", precision_score(y_test["wicket"], test_wicket_preds, zero_division=0))
-        mlflow.log_metric("test_wicket_recall", recall_score(y_test["wicket"], test_wicket_preds, zero_division=0))
-        mlflow.log_metric("test_wicket_f1", f1_score(y_test["wicket"], test_wicket_preds, zero_division=0))
-        mlflow.log_metric("test_wicket_mcc", matthews_corrcoef(y_test["wicket"], test_wicket_preds))
-        
-        mlflow.log_metric("test_wide_precision", precision_score(y_test["wide"], test_wide_preds, zero_division=0))
-        mlflow.log_metric("test_wide_recall", recall_score(y_test["wide"], test_wide_preds, zero_division=0))
-        mlflow.log_metric("test_wide_f1", f1_score(y_test["wide"], test_wide_preds, zero_division=0))
-        mlflow.log_metric("test_wide_mcc", matthews_corrcoef(y_test["wide"], test_wide_preds))
+
+        mlflow.log_metric(
+            "test_wicket_precision",
+            precision_score(y_test["wicket"], test_wicket_preds, zero_division=0),
+        )
+        mlflow.log_metric(
+            "test_wicket_recall",
+            recall_score(y_test["wicket"], test_wicket_preds, zero_division=0),
+        )
+        mlflow.log_metric(
+            "test_wicket_f1",
+            f1_score(y_test["wicket"], test_wicket_preds, zero_division=0),
+        )
+        mlflow.log_metric(
+            "test_wicket_mcc", matthews_corrcoef(y_test["wicket"], test_wicket_preds)
+        )
+
+        mlflow.log_metric(
+            "test_wide_precision",
+            precision_score(y_test["wide"], test_wide_preds, zero_division=0),
+        )
+        mlflow.log_metric(
+            "test_wide_recall",
+            recall_score(y_test["wide"], test_wide_preds, zero_division=0),
+        )
+        mlflow.log_metric(
+            "test_wide_f1", f1_score(y_test["wide"], test_wide_preds, zero_division=0)
+        )
+        mlflow.log_metric(
+            "test_wide_mcc", matthews_corrcoef(y_test["wide"], test_wide_preds)
+        )
 
         sample_x, sample_y = train_gen[0]
         sample_pred = model.predict(sample_x, verbose=0)
@@ -550,12 +671,7 @@ with mlflow.start_run():
             model,
             name=f"{MODEL_TYPE}_model",
             signature=signature,
-            pip_requirements=[
-                "tensorflow",
-                "numpy",
-                "pandas",
-                "scikit-learn"
-            ]
+            pip_requirements=["tensorflow", "numpy", "pandas", "scikit-learn"],
         )
 
         mlflow.log_artifact(save_path)
@@ -583,11 +699,22 @@ with mlflow.start_run():
         test_rmse = rmse
 
         logger.info("MLOps Gate Assessment validation check started")
-        logger.info(f"Current Metrics -> MAE: {test_mae} | MSE: {test_mse} | RMSE: {test_rmse} | R2: {test_r2}")
+        logger.info(
+            f"Current Metrics -> MAE: {test_mae} | MSE: {test_mse} | RMSE: {test_rmse} | R2: {test_r2}"
+        )
 
-        if test_mae < GATE_MAE and test_r2 > GATE_R2 and test_mse < GATE_MSE and test_rmse < GATE_RMSE:
-            logger.info("[SUCCESS] Model strictly cleared target metrics gate verification.")
-            logger.info("Promoting architectural deployment package to Production registry...")
+        if (
+            test_mae < GATE_MAE
+            and test_r2 > GATE_R2
+            and test_mse < GATE_MSE
+            and test_rmse < GATE_RMSE
+        ):
+            logger.info(
+                "[SUCCESS] Model strictly cleared target metrics gate verification."
+            )
+            logger.info(
+                "Promoting architectural deployment package to Production registry..."
+            )
 
             mlflow.set_tag("model_stage", "production")
             mlflow.set_tag("registry_status", "production")

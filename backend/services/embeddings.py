@@ -53,6 +53,7 @@ players/venues directly, only build a local table for the fallback
 tiers" — but the debutant/venue/season averaging would still need some
 version of this trick, since blended vectors aren't real trained rows.
 """
+
 from __future__ import annotations
 
 import json
@@ -62,7 +63,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 import numpy as np
-
 from ml_config import (
     BATTER_CLASSIFICATION_PATH,
     BATTER_EMB_DIM,
@@ -99,13 +99,16 @@ def _load() -> dict:
 def _load_classification_maps() -> tuple[dict[str, str], dict[str, str]]:
     """Returns (PLAYER_TO_BATTER_ROLE, PLAYER_TO_BOWLER_ROLE), exactly as in
     your snippet — just tolerant of a missing file."""
+
     def _load_one(path: str, label: str) -> dict[str, list[str]]:
         if not os.path.exists(path):
             logger.warning(
                 "%s classification file missing at %s — class-average "
                 "embedding fallback disabled for %s, will use the global "
                 "average instead.",
-                label, path, label,
+                label,
+                path,
+                label,
             )
             return {}
         with open(path, "r", encoding="utf-8") as f:
@@ -136,7 +139,9 @@ def _role_average(role_map_kind: str, role: str, field: str) -> np.ndarray | Non
     """Deterministic (no noise) average of `field` across every known
     player sharing `role`. role_map_kind is 'batter' or 'bowler'."""
     player_to_batter_role, player_to_bowler_role = _load_classification_maps()
-    player_to_role = player_to_batter_role if role_map_kind == "batter" else player_to_bowler_role
+    player_to_role = (
+        player_to_batter_role if role_map_kind == "batter" else player_to_bowler_role
+    )
 
     players = _load().get("players", {})
     vectors = [
@@ -172,7 +177,9 @@ def _resolve_static(
         return exact, "exact"
 
     player_to_batter_role, player_to_bowler_role = _load_classification_maps()
-    role_map = player_to_batter_role if role_map_kind == "batter" else player_to_bowler_role
+    role_map = (
+        player_to_batter_role if role_map_kind == "batter" else player_to_bowler_role
+    )
     role = role_map.get(player_name)
     if role is not None:
         avg = _role_average(role_map_kind, role, field)
@@ -186,7 +193,8 @@ def _resolve_static(
     logger.warning(
         "No embedding, classification, or global average available for "
         "'%s' (%s) — falling back to a zero vector.",
-        player_name, field,
+        player_name,
+        field,
     )
     return np.zeros(dim, dtype=np.float32), "zero"
 
@@ -243,16 +251,18 @@ class EmbeddingResolver:
         self._cache: dict[tuple[str, str], np.ndarray] = {}
         self._season_vec: np.ndarray | None = None
 
-    def _resolve(self, player_name: str, field: str, dim: int, role_map_kind: str) -> np.ndarray:
+    def _resolve(
+        self, player_name: str, field: str, dim: int, role_map_kind: str
+    ) -> np.ndarray:
         cache_key = (player_name, field)
         if cache_key in self._cache:
             return self._cache[cache_key]
 
         vector, tier = _resolve_static(player_name, field, dim, role_map_kind)
         if tier in ("class_average", "global_average"):
-            vector = vector + self._rng.normal(0.0, EMBEDDING_NOISE_STD, size=dim).astype(
-                np.float32
-            )
+            vector = vector + self._rng.normal(
+                0.0, EMBEDDING_NOISE_STD, size=dim
+            ).astype(np.float32)
         self._cache[cache_key] = vector
         return vector
 
@@ -260,7 +270,9 @@ class EmbeddingResolver:
         return self._resolve(player_name, "batter_embedding", BATTER_EMB_DIM, "batter")
 
     def non_striker_vec(self, player_name: str) -> np.ndarray:
-        return self._resolve(player_name, "non_striker_embedding", NON_STRIKER_EMB_DIM, "batter")
+        return self._resolve(
+            player_name, "non_striker_embedding", NON_STRIKER_EMB_DIM, "batter"
+        )
 
     def bowler_vec(self, player_name: str) -> np.ndarray:
         return self._resolve(player_name, "bowler_embedding", BOWLER_EMB_DIM, "bowler")
@@ -291,12 +303,12 @@ class MatchEmbeddingContext:
     """
 
     batter_index: dict[str, int]
-    batter_matrix: np.ndarray        # (len(batter_index) + 1, BATTER_EMB_DIM)
-    non_striker_matrix: np.ndarray   # same shape, indexed via batter_index
+    batter_matrix: np.ndarray  # (len(batter_index) + 1, BATTER_EMB_DIM)
+    non_striker_matrix: np.ndarray  # same shape, indexed via batter_index
     bowler_index: dict[str, int]
-    bowler_matrix: np.ndarray        # (len(bowler_index) + 1, BOWLER_EMB_DIM)
-    venue_matrix: np.ndarray         # (2, VENUE_EMB_DIM): [pad, this match's venue]
-    season_matrix: np.ndarray        # (2, SEASON_EMB_DIM): [pad, last-N-season average]
+    bowler_matrix: np.ndarray  # (len(bowler_index) + 1, BOWLER_EMB_DIM)
+    venue_matrix: np.ndarray  # (2, VENUE_EMB_DIM): [pad, this match's venue]
+    season_matrix: np.ndarray  # (2, SEASON_EMB_DIM): [pad, last-N-season average]
 
     def player_idx(self, name: str) -> int:
         """Index into batter_matrix / non_striker_matrix for `name`. Falls

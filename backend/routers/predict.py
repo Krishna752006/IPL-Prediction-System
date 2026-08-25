@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, HTTPException
-
 from schemas.match import PredictMatchRequest, PredictMatchResponse
 from services.match_engine import simulate_match
 from services.squads import list_team_codes
@@ -28,7 +27,9 @@ def predict_one_match(req: PredictMatchRequest) -> PredictMatchResponse:
             status_code=422, detail="toss_winner must equal team_a or team_b"
         )
     if req.toss_decision is not None and req.toss_decision not in ("bat", "bowl"):
-        raise HTTPException(status_code=422, detail="toss_decision must be 'bat' or 'bowl'")
+        raise HTTPException(
+            status_code=422, detail="toss_decision must be 'bat' or 'bowl'"
+        )
 
     try:
         result = simulate_match(

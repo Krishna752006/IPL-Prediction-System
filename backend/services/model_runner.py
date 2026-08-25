@@ -28,6 +28,7 @@ any reason, this falls back to HeuristicModelRunner so /predict-1-match
 still runs end-to-end (clearly flagged via `model_backend` in the
 response).
 """
+
 from __future__ import annotations
 
 import glob
@@ -38,7 +39,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 import numpy as np
-
 from ml_config import (
     MODEL_DIR,
     MODEL_PATH,
@@ -53,7 +53,6 @@ logger = logging.getLogger(__name__)
 try:
     import torch
     import torch.nn as nn
-
     from ml_model.tabtransformer_lstm import TabTransformerLSTM
 
     TORCH_AVAILABLE = True
@@ -162,6 +161,7 @@ class TrainedModelRunner(ModelRunner):
     (state_dict-based .pth) instead of a pickled bundle — see this module's
     docstring.
     """
+
     backend_name = "trained_model"
 
     def __init__(self, checkpoint: TrainedCheckpoint):
@@ -233,8 +233,12 @@ class TrainedModelRunner(ModelRunner):
         categorical_sequence: np.ndarray,
         score_before: float,
     ) -> tuple[float, float, float]:
-        numerical = _pad_sequence(numerical_sequence)[np.newaxis, ...]  # (1, SEQ_LEN, 32)
-        categorical = _pad_categorical(categorical_sequence)[np.newaxis, ...]  # (1, SEQ_LEN, 6)
+        numerical = _pad_sequence(numerical_sequence)[
+            np.newaxis, ...
+        ]  # (1, SEQ_LEN, 32)
+        categorical = _pad_categorical(categorical_sequence)[
+            np.newaxis, ...
+        ]  # (1, SEQ_LEN, 6)
 
         with torch.no_grad():
             numerical_t = torch.as_tensor(numerical, dtype=torch.float32)
@@ -255,9 +259,7 @@ class TrainedModelRunner(ModelRunner):
         wicket_prob = float(
             _sigmoid(outputs["wicket"].detach().cpu().numpy().flatten()[0])
         )
-        wide_prob = float(
-            _sigmoid(outputs["wide"].detach().cpu().numpy().flatten()[0])
-        )
+        wide_prob = float(_sigmoid(outputs["wide"].detach().cpu().numpy().flatten()[0]))
         return delta, wicket_prob, wide_prob
 
 

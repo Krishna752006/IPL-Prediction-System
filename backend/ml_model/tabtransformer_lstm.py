@@ -19,6 +19,7 @@ still worth keeping in sync manually).
 Last synced: verbatim from the tabtransformer_lstm.py you uploaded on
 2026-07-27. No modifications.
 """
+
 import math
 
 import torch

@@ -17,6 +17,7 @@ Only two extras types exist because the model only has wicket/wide heads
 (no no-ball/bye/leg-bye output) — matching train.py's target columns
 exactly (`current_score`, `is_wicket_target`, `isWide_target`).
 """
+
 from __future__ import annotations
 
 import contextlib
@@ -24,22 +25,21 @@ import logging
 import random
 
 import numpy as np
-
 from ml_config import (
     MAX_OVERS_PER_BOWLER,
     RANDOM_SEED,
-    TOTAL_OVERS,
     SEASON,
+    TOTAL_OVERS,
 )
-from services import embeddings
-from services import historical_form
+from services import embeddings, historical_form
 from services.bowler_selector import BowlerUsage, pick_next_bowler
-from services.feature_builder import BallContext, build_ball_features, _rr_momentum
+from services.feature_builder import BallContext, _rr_momentum, build_ball_features
 from services.match_state import BatterInnings, BowlerInnings, InningsState, MatchResult
 from services.model_runner import get_runner
 from services.squads import Player, Team, get_team
 
 logger = logging.getLogger(__name__)
+
 
 def _resolve_toss(team_a: str, team_b: str, rng: random.Random) -> tuple[str, str]:
     winner = rng.choice([team_a, team_b])
@@ -150,12 +150,12 @@ def _simulate_innings(
             bowler_form = historical_form.get_bowler_form(bowler_player.name)
 
             current_run_rate = (
-                innings.score / (innings.legal_balls / 6.0) if innings.legal_balls else 0.0
+                innings.score / (innings.legal_balls / 6.0)
+                if innings.legal_balls
+                else 0.0
             )
             pct_target = (
-                (innings.score / innings.target * 100.0)
-                if innings.target
-                else 0.0
+                (innings.score / innings.target * 100.0) if innings.target else 0.0
             )
             required_rr = 0.0
             if innings.target is not None and innings.legal_balls < 120:
@@ -196,7 +196,9 @@ def _simulate_innings(
             categorical_sequence = np.stack(innings.categorical_buffer)
 
             delta, wicket_prob, wide_prob = runner.predict_ball(
-                numerical_sequence, categorical_sequence, score_before=float(innings.score)
+                numerical_sequence,
+                categorical_sequence,
+                score_before=float(innings.score),
             )
 
             if wide_prob >= runner.wide_thresh:
@@ -204,7 +206,7 @@ def _simulate_innings(
                 current_bowler.runs_conceded += 1
                 # wide: no legal ball consumed, no strike change, bowler continues
                 continue
-            
+
             if wicket_prob >= runner.wicket_thresh:
                 innings.striker.balls += 1
                 innings.striker.is_out = True
@@ -225,7 +227,7 @@ def _simulate_innings(
             options = [0, 1, 2, 3]
             weights = [5, 2, 1, 0.01]
             s = random.choices(options, weights=weights, k=1)[0]
-            runs = int(np.clip((a+s), 0, 6))
+            runs = int(np.clip((a + s), 0, 6))
             innings.score += runs
             innings.striker.runs += runs
             innings.striker.balls += 1
@@ -285,8 +287,8 @@ def simulate_match(
     team_a = get_team(team_a_code)
     team_b = get_team(team_b_code)
 
-    effective_seed = seed if seed is not None else (
-        int(RANDOM_SEED) if RANDOM_SEED else None
+    effective_seed = (
+        seed if seed is not None else (int(RANDOM_SEED) if RANDOM_SEED else None)
     )
     rng = random.Random(effective_seed)
     emb_rng = np.random.default_rng(effective_seed)
@@ -313,8 +315,12 @@ def simulate_match(
     # docstring "UPDATE" section for why these are needed instead of the
     # model's own trained indices) — built once, shared by both innings
     # since the same 22+ players and venue apply throughout the match.
-    batting_pool_names = [p.name for team in (team_a, team_b) for p in team.batting_order]
-    bowling_pool_names = [p.name for team in (team_a, team_b) for p in team.bowling_pool]
+    batting_pool_names = [
+        p.name for team in (team_a, team_b) for p in team.batting_order
+    ]
+    bowling_pool_names = [
+        p.name for team in (team_a, team_b) for p in team.bowling_pool
+    ]
     match_ctx = embeddings.build_match_context(
         batting_pool_names, bowling_pool_names, venue, resolver
     )
@@ -330,11 +336,15 @@ def simulate_match(
             runner.load_match_context(match_ctx)
 
         innings1 = _new_innings(1, first_batting, first_bowling, target=None)
-        _simulate_innings(innings1, venue, toss_winner, resolver, match_ctx, runner, rng)
+        _simulate_innings(
+            innings1, venue, toss_winner, resolver, match_ctx, runner, rng
+        )
 
         target = innings1.score + 1
         innings2 = _new_innings(2, first_bowling, first_batting, target=target)
-        _simulate_innings(innings2, venue, toss_winner, resolver, match_ctx, runner, rng)
+        _simulate_innings(
+            innings2, venue, toss_winner, resolver, match_ctx, runner, rng
+        )
 
     if innings2.score >= target:
         winner = innings2.batting_team

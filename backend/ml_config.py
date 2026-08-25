@@ -18,13 +18,12 @@ frontend/src/data/ — the file you uploaded is spelled "ipl_2026_squads.json".
 I've defaulted to the spelling that matches the upload; fix SQUADS_PATH below
 if your real file on disk uses the other spelling.
 """
+
 import os
 
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(BACKEND_DIR)
-ML_SERVICE_DIR = os.environ.get(
-    "ML_SERVICE_DIR", os.path.join(REPO_ROOT, "ml-service")
-)
+ML_SERVICE_DIR = os.environ.get("ML_SERVICE_DIR", os.path.join(REPO_ROOT, "ml-service"))
 
 SEASON = 2026
 
@@ -104,15 +103,38 @@ SEASON_EMB_DIM = 8
 MATCH_STATE_EMB_DIM = 8
 
 RAW_FEATURE_COLUMNS = [
-    "inning", "over", "total_balls", "balls_remaining", "phase_pp",
-    "phase_middle", "phase_death", "target", "is_pacer",
-    "wickets_before", "percentage_target_achieved", "current_run_rate",
-    "required_run_rate", "sin_ball", "cos_ball", "rr_momentum",
-    "toss_won", "venue_phase_avg", "batter_history_matches",
-    "last_1_runs", "last_1_balls", "last_2_runs", "last_2_balls",
-    "last_3_runs", "last_3_balls", "bowler_history_matches",
-    "last_1_runs_conceded", "last_1_balls_bowled", "last_2_runs_conceded",
-    "last_2_balls_bowled", "last_3_runs_conceded", "last_3_balls_bowled",
+    "inning",
+    "over",
+    "total_balls",
+    "balls_remaining",
+    "phase_pp",
+    "phase_middle",
+    "phase_death",
+    "target",
+    "is_pacer",
+    "wickets_before",
+    "percentage_target_achieved",
+    "current_run_rate",
+    "required_run_rate",
+    "sin_ball",
+    "cos_ball",
+    "rr_momentum",
+    "toss_won",
+    "venue_phase_avg",
+    "batter_history_matches",
+    "last_1_runs",
+    "last_1_balls",
+    "last_2_runs",
+    "last_2_balls",
+    "last_3_runs",
+    "last_3_balls",
+    "bowler_history_matches",
+    "last_1_runs_conceded",
+    "last_1_balls_bowled",
+    "last_2_runs_conceded",
+    "last_2_balls_bowled",
+    "last_3_runs_conceded",
+    "last_3_balls_bowled",
 ]
 
 SEQ_LEN = 30

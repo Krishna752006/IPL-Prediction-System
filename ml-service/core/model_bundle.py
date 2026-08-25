@@ -10,7 +10,7 @@ class IPLModelBundle:
     def preprocess(self, X: np.ndarray, seq_len: int = 30):
         if len(X.shape) != 2:
             raise ValueError("Expected 2D feature matrix")
-            
+
         # Pad with zeros if the inning has fewer balls than seq_len
         if X.shape[0] < seq_len:
             pad = np.zeros((seq_len - X.shape[0], X.shape[1]), dtype=np.float32)
@@ -18,7 +18,7 @@ class IPLModelBundle:
         else:
             # Crop to the most recent balls if it exceeds seq_len
             X = X[-seq_len:]
-            
+
         return X.reshape(1, seq_len, X.shape[1])
 
     def predict(self, X: np.ndarray):

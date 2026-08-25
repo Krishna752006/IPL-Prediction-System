@@ -23,16 +23,15 @@ what this file now produces. The indices themselves aren't the model's
 they're row numbers into a match-local table that model_runner swaps in
 for the actual match.
 """
+
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
 
 import numpy as np
-
 from ml_config import RAW_FEATURE_COLUMNS
-from services import embeddings
-from services import offline_stats
+from services import embeddings, offline_stats
 from services.match_state import InningsState
 
 
@@ -158,14 +157,14 @@ def build_ball_features(
             match_ctx.venue_idx,
             match_ctx.season_idx,
             0,  # match_state: CONFIRMED (not guessed) via tabtransformer_lstm.py —
-                # match_state_embedding is declared with padding_idx=0, so index 0
-                # isn't some trained "neutral" state, it's the model's frozen,
-                # permanently-zero pad row. Feeding 0 for every ball means this
-                # feature contributes exactly zero signal to every prediction
-                # right now — not a wrong-but-plausible guess, just an absent
-                # one. The real per-ball state-clustering logic (whatever feeds
-                # match_state_id during training) lives in the ml-service data
-                # pipeline, which I don't have.
+            # match_state_embedding is declared with padding_idx=0, so index 0
+            # isn't some trained "neutral" state, it's the model's frozen,
+            # permanently-zero pad row. Feeding 0 for every ball means this
+            # feature contributes exactly zero signal to every prediction
+            # right now — not a wrong-but-plausible guess, just an absent
+            # one. The real per-ball state-clustering logic (whatever feeds
+            # match_state_id during training) lives in the ml-service data
+            # pipeline, which I don't have.
         ],
         dtype=np.int64,
     )

@@ -24,6 +24,7 @@ player's row with the highest history_matches value is their most recent
 recorded match — no `date` column survives into this file, so that's how
 "most recent" is determined (idxmax, not a date sort).
 """
+
 from __future__ import annotations
 
 import logging
@@ -32,7 +33,6 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 import pandas as pd
-
 from ml_config import RECENT_FORM_BATTER_PATH, RECENT_FORM_BOWLER_PATH
 
 logger = logging.getLogger(__name__)
@@ -90,10 +90,14 @@ def _load_bowler_table() -> dict[str, BowlerForm]:
         row["bowler"]: BowlerForm(
             history_matches=int(row["history_matches"]) + 1,
             last_runs_conceded=(
-                row["last_1_runs_conceded"], row["last_2_runs_conceded"], row["last_3_runs_conceded"],
+                row["last_1_runs_conceded"],
+                row["last_2_runs_conceded"],
+                row["last_3_runs_conceded"],
             ),
             last_balls_bowled=(
-                row["last_1_balls_bowled"], row["last_2_balls_bowled"], row["last_3_balls_bowled"],
+                row["last_1_balls_bowled"],
+                row["last_2_balls_bowled"],
+                row["last_3_balls_bowled"],
             ),
         )
         for _, row in latest.iterrows()

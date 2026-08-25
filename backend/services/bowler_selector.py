@@ -29,14 +29,14 @@ verification notes shipped with this change). The 4-over cap itself is
 still never relaxed; the "relax no-consecutive" fallback below is now a
 true last resort that shouldn't fire for any 2026 squad.
 """
+
 from __future__ import annotations
 
 import random
 
 from fastapi import APIRouter
-from pydantic import BaseModel, Field
-
 from ml_config import MAX_OVERS_PER_BOWLER
+from pydantic import BaseModel, Field
 from services.squads import Player
 
 
@@ -94,7 +94,9 @@ def pick_next_bowler(
         )
 
     least_overs = min(usage.get(p.name, BowlerUsage()).overs_bowled for p in pool)
-    pool = [p for p in pool if usage.get(p.name, BowlerUsage()).overs_bowled == least_overs]
+    pool = [
+        p for p in pool if usage.get(p.name, BowlerUsage()).overs_bowled == least_overs
+    ]
 
     return select_bowler_from_pool(pool, rng=rng)
 

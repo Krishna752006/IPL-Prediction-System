@@ -10,21 +10,21 @@ import mlflow.pytorch
 import numpy as np
 import torch
 import torch.nn as nn
-from core.model_bundle import IPLModelBundle
 from core.config_loader import load_config
 from core.logger import setup_logger
-from training.loader import build_dataloaders
+from core.model_bundle import IPLModelBundle
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
     matthews_corrcoef,
+    mean_squared_error,
     precision_score,
     recall_score,
     roc_auc_score,
-    mean_squared_error
 )
-from training.tabtransformer_lstm import TabTransformerLSTM
 from tqdm import tqdm
+from training.loader import build_dataloaders
+from training.tabtransformer_lstm import TabTransformerLSTM
 
 logger = setup_logger(__name__)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -56,7 +56,7 @@ def print_binary_metrics(y_true, y_pred, y_prob):
     precision = float(precision_score(y_true, y_pred, zero_division=0))
     recall = float(recall_score(y_true, y_pred, zero_division=0))
     f1 = float(f1_score(y_true, y_pred, zero_division=0))
-    
+
     # Suppress MCC warnings for batches that might only have one class
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -101,17 +101,17 @@ def get_adaptive_threshold(probs, positive_rate):
 def get_batch_metrics(y_true, y_prob, thresh):
     """Helper to calculate per-batch metrics cleanly."""
     y_pred = (np.array(y_prob) > thresh).astype(float)
-    
+
     # Using probabilities for MSE provides true Brier Score penalty
     mse = mean_squared_error(y_true, y_prob)
     rmse = np.sqrt(mse)
-    
+
     f1 = f1_score(y_true, y_pred, zero_division=0)
-    
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         mcc = matthews_corrcoef(y_true, y_pred)
-        
+
     return mse, rmse, f1, mcc
 
 
@@ -197,16 +197,12 @@ def evaluate_model(model, dataloader, wicket_thresh, wide_thresh, split_name="VA
     return reg_metrics, wicket_metrics, wide_metrics
 
 
-def save_model_to_staging(
-    model, config, target_year, dataset_version, feature_version
-):
+def save_model_to_staging(model, config, target_year, dataset_version, feature_version):
     staging_dir = config["paths"]["staging_dir"]
     os.makedirs(staging_dir, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    model_filename = (
-        f"tabtransformer_lstm_season_{target_year}_{timestamp}.pkl"
-    )
+    model_filename = f"tabtransformer_lstm_season_{target_year}_{timestamp}.pkl"
     staging_path = os.path.join(staging_dir, model_filename)
 
     bundle = IPLModelBundle(
@@ -223,16 +219,14 @@ def save_model_to_staging(
 
 
 def train_one_year(
-    config_path="configs/tabtransformer.yaml", 
-    manual_wicket_thresh=None, 
-    manual_wide_thresh=None
+    config_path="configs/tabtransformer.yaml",
+    manual_wicket_thresh=None,
+    manual_wide_thresh=None,
 ):
     config = load_config(config_path)
 
     mlflow.set_tracking_uri(config["paths"].get("mlflow_db", "sqlite:///mlflow.db"))
-    mlflow.set_experiment(
-        config["experiment"].get("name", "ipl_tabtransformer_lstm")
-    )
+    mlflow.set_experiment(config["experiment"].get("name", "ipl_tabtransformer_lstm"))
 
     target_year = config["data"]["target_year"]
     epochs = config["model"]["epochs"]
@@ -265,9 +259,7 @@ def train_one_year(
     )
     wide_criterion = nn.BCEWithLogitsLoss(pos_weight=wide_pos_weight, reduction="none")
 
-    optimizer = torch.optim.Adam(
-        model.parameters(), lr=lr, weight_decay=weight_decay
-    )
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer,
         max_lr=lr,
@@ -329,33 +321,43 @@ def train_one_year(
 
                 all_score_preds.extend(outputs["score"].detach().cpu().numpy())
                 all_score_targets.extend(batch["score_target"].cpu().numpy())
-                
+
                 # Fetch detached arrays for per-batch metric calculation
                 batch_w_probs = torch.sigmoid(outputs["wicket"]).detach().cpu().numpy()
                 batch_w_targets = batch["wicket_target"].cpu().numpy()
                 all_wicket_probs.extend(batch_w_probs)
                 all_wicket_targets.extend(batch_w_targets)
-                
+
                 batch_wd_probs = torch.sigmoid(outputs["wide"]).detach().cpu().numpy()
                 batch_wd_targets = batch["wide_target"].cpu().numpy()
                 all_wide_probs.extend(batch_wd_probs)
                 all_wide_targets.extend(batch_wd_targets)
 
                 # Use manual thresholds if provided, otherwise default to 0.5 for active batch calculation
-                current_w_thresh = manual_wicket_thresh if manual_wicket_thresh is not None else 0.5
-                current_wd_thresh = manual_wide_thresh if manual_wide_thresh is not None else 0.5
+                current_w_thresh = (
+                    manual_wicket_thresh if manual_wicket_thresh is not None else 0.5
+                )
+                current_wd_thresh = (
+                    manual_wide_thresh if manual_wide_thresh is not None else 0.5
+                )
 
                 # Compute batch-level metrics
-                _, _, w_f1, w_mcc = get_batch_metrics(batch_w_targets, batch_w_probs, current_w_thresh)
-                _, _, wd_f1, wd_mcc = get_batch_metrics(batch_wd_targets, batch_wd_probs, current_wd_thresh)
+                _, _, w_f1, w_mcc = get_batch_metrics(
+                    batch_w_targets, batch_w_probs, current_w_thresh
+                )
+                _, _, wd_f1, wd_mcc = get_batch_metrics(
+                    batch_wd_targets, batch_wd_probs, current_wd_thresh
+                )
 
                 # Update progress bar
-                pbar.set_postfix({
-                    "W_F1": f"{w_f1:.3f}", 
-                    "W_MCC": f"{w_mcc:.3f}",
-                    "Wd_F1": f"{wd_f1:.3f}", 
-                    "Wd_MCC": f"{wd_mcc:.3f}"
-                })
+                pbar.set_postfix(
+                    {
+                        "W_F1": f"{w_f1:.3f}",
+                        "W_MCC": f"{w_mcc:.3f}",
+                        "Wd_F1": f"{wd_f1:.3f}",
+                        "Wd_MCC": f"{wd_mcc:.3f}",
+                    }
+                )
 
             avg_loss = total_loss / len(train_loader)
             mlflow.log_metric("train_loss", avg_loss, step=epoch)
@@ -435,5 +437,5 @@ if __name__ == "__main__":
     train_one_year(
         config_path="configs/tabtransformer.yaml",
         manual_wicket_thresh=None,
-        manual_wide_thresh=None 
+        manual_wide_thresh=None,
     )

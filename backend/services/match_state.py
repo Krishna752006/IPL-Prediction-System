@@ -23,7 +23,9 @@ class BatterInnings:
             "balls": self.balls,
             "fours": self.fours,
             "sixes": self.sixes,
-            "strike_rate": round(self.runs / self.balls * 100, 2) if self.balls else 0.0,
+            "strike_rate": (
+                round(self.runs / self.balls * 100, 2) if self.balls else 0.0
+            ),
             "out": self.is_out,
             "dismissal": self.dismissal,
         }
@@ -75,7 +77,9 @@ class InningsState:
     current_bowler: BowlerInnings | None = None
     current_over: int = 0  # 0-indexed
     balls_in_current_over: int = 0
-    recent_ball_runs: list[int] = field(default_factory=list)  # legal-ball runs, for rr_momentum
+    recent_ball_runs: list[int] = field(
+        default_factory=list
+    )  # legal-ball runs, for rr_momentum
     # Per-ball feature tensors, most-recent-last (split in two since the
     # TabTransformerLSTM trained by train_embeddings.py takes numerical
     # features and categorical embedding indices as separate inputs — see
