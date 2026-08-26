@@ -3,11 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { LogIn } from 'lucide-react';
 import API from "../api/authApi";
+import { getApiErrorMessage } from "../utils/apiError";
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [userType, setUserType] = useState('user');
   const [showGuestModal, setShowGuestModal] = useState(false);
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
@@ -26,14 +26,8 @@ const Login = () => {
         );
         navigate("/");
       } else { alert(response.data.message); }
-  } catch (error: any) {
-    if (error.response?.data?.detail) {
-      alert(error.response.data.detail);
-    } else if (error.response?.data?.message) {
-      alert(error.response.data.message);
-    } else {
-      alert("Something went wrong.");
-    }
+  } catch (error: unknown) {
+    alert(getApiErrorMessage(error));
   }
   };
 

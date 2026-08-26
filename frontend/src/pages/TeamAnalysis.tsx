@@ -3,6 +3,11 @@ import { Users, Trophy, TrendingUp } from 'lucide-react';
 import squadsData from '../data/ipl_2026_squads.json';
 import winData from '../data/win_percentage_history.json';
 
+interface Player {
+  name: string;
+  overseas?: boolean;
+}
+
 const TeamAnalysis = () => {
   const [selectedTeamKey, setSelectedTeamKey] = useState('CSK');
 
@@ -76,9 +81,9 @@ const TeamAnalysis = () => {
   const currentMeta = teamMeta[selectedTeamKey as keyof typeof teamMeta];
 
   // Merge Playing XI and Bench, then strictly limit to a maximum of 25 players
-  const playingXi = Object.values(currentSquad.playing_xi);
-  const bench = currentSquad.bench || [];
-  const allPlayers = [...playingXi, ...bench].slice(0, 25);
+  const playingXi = Object.values(currentSquad.playing_xi) as Player[];
+  const bench = (currentSquad.bench || []) as Player[];
+  const allPlayers: Player[] = [...playingXi, ...bench].slice(0, 25);
   
   const halfIndex = Math.ceil(allPlayers.length / 2);
   const firstHalf = allPlayers.slice(0, halfIndex);
@@ -96,7 +101,7 @@ const TeamAnalysis = () => {
           onChange={(e) => setSelectedTeamKey(e.target.value)}
           className="w-full sm:w-auto p-3 bg-slate-50 border border-slate-200 text-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
         >
-          {winData.map((t: any) => {
+          {winData.map((t) => {
             const acronym = t.team.match(/\(([^)]+)\)/)?.[1] || t.team;
             return (
               <option key={t.team} value={acronym}>
@@ -180,7 +185,7 @@ const TeamAnalysis = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
           <ul className="space-y-2">
-            {firstHalf.map((player: any, index: number) => (
+            {firstHalf.map((player, index: number) => (
               <li key={index} className="flex items-center text-sm font-medium text-slate-700 p-2 rounded-lg hover:bg-slate-50">
                 <span className="w-6 text-slate-400 text-xs">{index + 1}.</span>
                 {player.name} 
@@ -189,7 +194,7 @@ const TeamAnalysis = () => {
             ))}
           </ul>
           <ul className="space-y-2">
-            {secondHalf.map((player: any, index: number) => (
+            {secondHalf.map((player, index: number) => (
               <li key={index} className="flex items-center text-sm font-medium text-slate-700 p-2 rounded-lg hover:bg-slate-50">
                 <span className="w-6 text-slate-400 text-xs">{halfIndex + index + 1}.</span>
                 {player.name} 
@@ -203,7 +208,14 @@ const TeamAnalysis = () => {
   );
 };
 
-const StatCard = ({ icon, title, value, color }: any) => {
+interface StatCardProps {
+  icon: React.ReactElement;
+  title: string;
+  value: string | number;
+  color: string;
+}
+
+const StatCard = ({ icon, title, value, color }: StatCardProps) => {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow relative overflow-hidden group">
       <div className="absolute -right-6 -top-6 opacity-10 group-hover:scale-110 transition-transform duration-300" style={{ color }}>

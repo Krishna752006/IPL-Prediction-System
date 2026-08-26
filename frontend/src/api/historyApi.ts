@@ -1,6 +1,7 @@
 import API from "./authApi";
+import type { PredictionResult } from "../utils/PredictionModel";
 
-export const savePredictionHistory = (prediction: any) => {
+export const savePredictionHistory = (prediction: PredictionResult) => {
     return API.post("/prediction-history", prediction);
 };
 

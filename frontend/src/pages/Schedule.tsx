@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, RefreshCw, Trophy, Sparkles } from 'lucide-react';
+import { RefreshCw, Trophy, Sparkles } from 'lucide-react';
 import scheduleData from '../data/schedule.json';
 import { usePredictionStore } from '../store/predictionStore';
 

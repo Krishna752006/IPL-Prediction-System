@@ -49,6 +49,12 @@ export interface PredictionResult {
     model_backend: string;
 }
 
+interface PredictionRequestBody {
+    team_a: string;
+    team_b: string;
+    venue?: string;
+}
+
 const PredictionModel = {
     predict: async (
         teamA: string,
@@ -61,7 +67,7 @@ const PredictionModel = {
 
         try {
 
-            const body: any = {
+            const body: PredictionRequestBody = {
                 team_a: teamA,
                 team_b: teamB
             };

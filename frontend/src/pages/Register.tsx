@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
 import API from "../api/authApi";
+import { getApiErrorMessage } from "../utils/apiError";
 
 const Register = () => {
   const [email, setEmail] = useState('');
@@ -34,14 +34,8 @@ const Register = () => {
       alert("Registration Successful!");
       navigate("/login");
   } else { setError(response.data.message); }
-  } catch (err: any) {
-    if (err.response?.data?.detail) {
-      setError(err.response.data.detail);
-    } else if (err.response?.data?.message) {
-      setError(err.response.data.message);
-    } else {
-      setError("Something went wrong. Please try again.");
-    }
+  } catch (err: unknown) {
+    setError(getApiErrorMessage(err, "Something went wrong. Please try again."));
   }
   };
 

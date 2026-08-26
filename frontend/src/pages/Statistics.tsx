@@ -23,8 +23,16 @@ import winPercentageHistory from '../data/win_percentage_history.json';
 type TeamScoreData = Record<string, Record<string, { highest: string; lowest: string }>>;
 type PlayerScoreData = Record<string, Record<string, { player: string; score: string; year: string }>>;
 
+type TabId = 'headToHead' | 'overview' | 'franchises' | 'records';
+
+interface TabConfig {
+  id: TabId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
 const Statistics: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'headToHead' | 'overview' | 'franchises' | 'records'>('overview');
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
   
   // State for Head-to-Head matchup tool
   const [team1, setTeam1] = useState<string>('CSK');
@@ -35,7 +43,7 @@ const Statistics: React.FC = () => {
 
   // Helper: Find Head-to-Head data
   const h2hRecord = headToHead.find(
-    (item: any) => 
+    (item) => 
       (item.team1 === team1 && item.team2 === team2) || 
       (item.team1 === team2 && item.team2 === team1)
   );
@@ -53,12 +61,12 @@ const Statistics: React.FC = () => {
   const t2PlayerVsT1 = allPlayerScores[team2]?.[`vs_${team1}`];
 
   // All-time highest score calculation
-  const highestMatch = [...highestLowest].sort((a: any, b: any) => {
+  const highestMatch = [...highestLowest].sort((a, b) => {
     return parseInt(b.highest.score.split('/')[0]) - parseInt(a.highest.score.split('/')[0]);
   })[0];
 
   // All-time lowest score calculation
-  const lowestMatch = [...highestLowest].sort((a: any, b: any) => {
+  const lowestMatch = [...highestLowest].sort((a, b) => {
     return parseInt(a.lowest.score.split('/')[0]) - parseInt(b.lowest.score.split('/')[0]);
   })[0];
 
@@ -66,7 +74,7 @@ const Statistics: React.FC = () => {
 
   const topRunScorer = Object.entries(
     highestRunScorer.highest_run_scorer_for_each_team
-  ).sort((a: any, b: any) => Number(b[1].runs) - Number(a[1].runs))[0];
+  ).sort((a, b) => Number(b[1].runs) - Number(a[1].runs))[0];
 
   return (
     <div className="max-w-7xl mx-auto space-y-8 px-2 sm:px-4">
@@ -92,18 +100,20 @@ const Statistics: React.FC = () => {
 
         {/* Navigation Tabs */}
         <div className="flex flex-wrap gap-2 mt-8 pt-6 border-t border-slate-800">
-          {[
-            { id: 'overview', label: 'Overview Highlights', icon: Flame },
-            { id: 'headToHead', label: 'Rivalry & H2H Matrix', icon: Swords },
-            { id: 'franchises', label: 'Franchise History', icon: Trophy },
-            { id: 'records', label: 'All-Time Records', icon: Target },
-          ].map((tab) => {
+          {(
+            [
+              { id: 'overview', label: 'Overview Highlights', icon: Flame },
+              { id: 'headToHead', label: 'Rivalry & H2H Matrix', icon: Swords },
+              { id: 'franchises', label: 'Franchise History', icon: Trophy },
+              { id: 'records', label: 'All-Time Records', icon: Target },
+            ] as TabConfig[]
+          ).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
+                onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
@@ -187,7 +197,7 @@ const Statistics: React.FC = () => {
               </div>
 
               <div className="space-y-3">
-                {lowestDefended.lowest_scores_defended_in_ipl_top_10.map((item: any, idx: number) => (
+                {lowestDefended.lowest_scores_defended_in_ipl_top_10.map((item, idx: number) => (
                   <div key={idx} className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/50 transition-colors border border-slate-100">
                     <div className="flex items-center gap-3">
                       <span className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs ${
@@ -224,7 +234,7 @@ const Statistics: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {Object.entries(highestRunScorer.highest_run_scorer_for_each_team).map(([team, info]: any) => (
+                {Object.entries(highestRunScorer.highest_run_scorer_for_each_team).map(([team, info]) => (
                   <div key={team} className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
                     <div className="flex justify-between items-start">
                       <span className="px-2 py-0.5 bg-slate-200 text-slate-700 font-bold rounded text-xs">{team}</span>
@@ -381,7 +391,7 @@ const Statistics: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {headToHead.map((row: any) => {
+                  {headToHead.map((row) => {
                     const t1Pct = Math.round((row.team1Wins / row.matchesPlayed) * 100);
                     return (
                       <tr key={row._id} className="hover:bg-slate-50/80 transition-colors">
@@ -415,7 +425,7 @@ const Statistics: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {winPercentageHistory.map((teamData: any, idx: number) => (
+              {winPercentageHistory.map((teamData, idx: number) => (
                 <div key={idx} className="p-5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-indigo-200 transition-all shadow-sm">
                   <div className="flex justify-between items-start mb-3">
                     <div>
@@ -446,7 +456,7 @@ const Statistics: React.FC = () => {
                   <div>
                     <p className="text-xs font-semibold text-slate-600 mb-2">Recent Season Performances:</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {teamData.seasons.slice(-5).map((s: any) => (
+                      {teamData.seasons.slice(-5).map((s) => (
                         <span key={s.year} className="text-[11px] bg-slate-200/80 px-2 py-1 rounded font-medium text-slate-700">
                           {s.year}: <strong className="text-slate-900">{s.position}</strong>
                         </span>
@@ -478,7 +488,7 @@ const Statistics: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {highestLowest.map((row: any) => (
+                  {highestLowest.map((row) => (
                     <tr key={row.team} className="hover:bg-slate-50/80 transition-colors">
                       <td className="p-3.5 font-bold text-slate-900">{row.team}</td>
                       <td className="p-3.5 font-extrabold text-emerald-600">{row.highest.score}</td>
