@@ -139,13 +139,24 @@ def check_performance(num_matches=30, seed=29):
         )
         call_stats["total_time"] += time.perf_counter() - t0
         call_stats["count"] += 1
-        # classify using the same thresholds match_engine.py applies, purely
-        # for reporting — doesn't change simulation behavior
-        from ml_config import WICKET_PROB_THRESHOLD, WIDE_PROB_THRESHOLD
-
-        if wide_prob >= WIDE_PROB_THRESHOLD:
+        # Classify using the runner's OWN current thresholds (its static
+        # wicket_thresh/wide_thresh fallback values), purely for reporting —
+        # doesn't change simulation behavior. Previously this compared
+        # against ml_config.WICKET_PROB_THRESHOLD/WIDE_PROB_THRESHOLD (a
+        # fixed 0.5/0.5), which was never what match_engine.py actually
+        # compared against even before the rolling-calibration change (it
+        # used runner.wicket_thresh/wide_thresh, offset by a hardcoded
+        # -0.225/+0.32). Since match_engine.py now recalibrates the real
+        # decision threshold every innings from the model's own recent
+        # output (see services/model_runner.py's RollingThreshold), no
+        # single static number can fully reproduce the real per-ball
+        # decision here either — treat this Outcome split as an
+        # approximation, and trust check_realism_stats()'s fours/sixes/
+        # wickets/score numbers (reconstructed from actual match results)
+        # as the authoritative read on real simulation behavior.
+        if wide_prob >= self.wide_thresh:
             call_stats["wides"] += 1
-        elif wicket_prob >= WICKET_PROB_THRESHOLD:
+        elif wicket_prob >= self.wicket_thresh:
             call_stats["wickets"] += 1
         else:
             call_stats["normal"] += 1

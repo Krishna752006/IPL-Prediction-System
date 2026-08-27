@@ -15,6 +15,12 @@ class BatterInnings:
     sixes: int = 0
     is_out: bool = False
     dismissal: str | None = None  # e.g. "b Matt Henry"
+    # 1-indexed slot in the batting XI (1..11) — set by match_engine.py when
+    # this BatterInnings is created. Feeds services.model_runner's
+    # order_bucket()-based wicket-chance modifier and run-weight profile, so
+    # e.g. an opener and a tailender aren't dismissed at the same rate or
+    # scoring off the same run distribution.
+    order_position: int = 1
 
     def to_dict(self) -> dict:
         return {
@@ -77,6 +83,12 @@ class InningsState:
     current_bowler: BowlerInnings | None = None
     current_over: int = 0  # 0-indexed
     balls_in_current_over: int = 0
+    # How many legal deliveries *in a row* (most recent first) have ended in
+    # a wicket. Reset to 0 the moment a non-wicket ball is bowled; fed into
+    # services.model_runner.wicket_threshold_for_streak() each ball so an
+    # immediate follow-up wicket gets progressively harder, and a 4th in a
+    # row is blocked outright.
+    consecutive_wickets: int = 0
     recent_ball_runs: list[int] = field(
         default_factory=list
     )  # legal-ball runs, for rr_momentum

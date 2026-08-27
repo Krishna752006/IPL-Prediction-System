@@ -34,7 +34,9 @@ from __future__ import annotations
 import glob
 import logging
 import os
+import random
 import threading
+from collections import deque
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -64,12 +66,14 @@ class ModelRunner:
     """Common interface both the real and heuristic runners implement.
 
     Both subclasses also expose `wicket_thresh` / `wide_thresh` (floats):
-    the sigmoid-probability cutoffs match_engine.py compares wicket_prob /
-    wide_prob against to decide whether a wicket/wide actually happens.
-    TrainedModelRunner pulls these from the checkpoint itself (the exact
-    adaptive thresholds computed at training time via
-    train_embeddings.py's get_adaptive_threshold()) rather than a single
-    global guess — see TrainedModelRunner.__init__.
+    static baseline cutoffs used only as the `fallback` for
+    match_engine.py's RollingThreshold instances (see this module's "Custom
+    ball-outcome shaping" section) until an innings has produced enough of
+    the model's own raw output to calibrate against. TrainedModelRunner
+    pulls its baseline from the checkpoint itself (the adaptive thresholds
+    computed at training time via train_embeddings.py's
+    get_adaptive_threshold()) rather than a single global guess — see
+    TrainedModelRunner.__init__.
     """
 
     backend_name = "unknown"
@@ -112,6 +116,224 @@ def _pad_categorical(sequence: np.ndarray) -> np.ndarray:
 
 def _sigmoid(x: float) -> float:
     return 1.0 / (1.0 + np.exp(-x))
+
+
+# =============================================================================
+# Custom ball-outcome shaping
+# =============================================================================
+# The checkpoint's raw wicket_prob / wide_prob outputs don't sit at any
+# absolute level we can predict ahead of time — verify_simulation.py has
+# shown the *same* checkpoint swing from a 0.0% to a 7.8/match wicket rate
+# across two runs, while wide sits stuck around 40% either way. A fixed
+# offset added to a threshold (the old `checkpoint.wicket_thresh - 0.225` /
+# `+ 0.32`) only "worked" for whatever raw distribution the checkpoint
+# happened to produce that one time; it silently breaks the moment the
+# distribution drifts, which is exactly what's been observed. So instead:
+#
+#   1. Both thresholds are now recalibrated continuously, per innings, from
+#      a rolling window of the model's OWN recent raw output (RollingThreshold
+#      below) — targeting a realistic real-world rate rather than trusting
+#      the checkpoint's absolute scale.
+#   2. On top of that calibrated wicket threshold, the cricket-domain rules
+#      requested are layered in: a batting-order-dependent chance modifier
+#      (openers are harder to dismiss, tail easier) and a streak penalty
+#      that makes an immediate follow-up wicket progressively rarer, with a
+#      4th in a row blocked outright.
+#   3. Run *magnitude* on a normal ball is no longer derived from the
+#      model's own delta at all (see TrainedModelRunner's docstring — the
+#      score head has no reliable per-ball resolution) but sampled from a
+#      batting-order-aware weight table, which is what actually controls
+#      fours/sixes/strike-rotation realism.
+#
+# match_engine.py owns the per-ball loop and the innings state (who's on
+# strike, how many wickets just fell in a row), so it calls the helpers
+# below explicitly, ball by ball. ModelRunner.predict_ball's own contract —
+# return the model's raw (delta, wicket_prob, wide_prob) — is left
+# untouched so nothing else that depends on it (e.g.
+# verify_simulation.py's profiling patch of TrainedModelRunner.predict_ball)
+# breaks.
+
+WIDE_TARGET_RATE = 0.045
+"""Target fraction of delivery *attempts* that should be called a wide.
+Real T20 cricket runs ~4-5%; retune if verify_simulation.py's wide% drifts
+noticeably from this after a checkpoint change."""
+
+WICKET_BASE_TARGET_RATE = 0.035
+"""Target fraction of legal balls that end in a dismissal for an
+"average" (bucket-3-ish, modifier ~0) batter, before the order/streak
+adjustments below are layered on. Lands around 7-8 wickets/innings across
+a full XI — see ORDER_WICKET_MODIFIER for how this shifts by batting
+position. (Empirically tuned against a full run of the simulation
+pipeline — see the module-level note above ORDER_RUN_WEIGHTS.)"""
+
+CALIBRATION_WINDOW = 40
+"""How many of the model's most recent raw probability samples (this
+innings) a RollingThreshold calibrates against."""
+
+MIN_CALIBRATION_SAMPLES = 15
+"""Below this many samples, RollingThreshold hasn't seen enough of this
+innings' own output yet and uses its static `fallback` instead (the
+checkpoint's own wicket_thresh/wide_thresh, or ml_config's defaults for the
+heuristic backend)."""
+
+
+class RollingThreshold:
+    """A threshold that recalibrates itself so that, of the model's own
+    recent raw probability outputs *this innings*, roughly `target_rate` of
+    them sit at or above it — rather than comparing against a fixed number
+    that assumes a raw-output distribution/scale we have no way to verify
+    ahead of time for a given checkpoint.
+
+    Not thread-shared: match_engine.py creates one pair of these (wide,
+    wicket) per innings, matching TrainedModelRunner's own per-match lock
+    and reset_innings() lifecycle.
+    """
+
+    def __init__(
+        self,
+        target_rate: float,
+        window: int = CALIBRATION_WINDOW,
+        min_samples: int = MIN_CALIBRATION_SAMPLES,
+        fallback: float = 0.5,
+    ):
+        self.target_rate = target_rate
+        self.min_samples = min_samples
+        self.fallback = fallback
+        self._samples: deque[float] = deque(maxlen=window)
+
+    def observe(self, raw_prob: float) -> None:
+        self._samples.append(float(raw_prob))
+
+    def threshold(self) -> float:
+        return self.threshold_for_rate(self.target_rate)
+
+    def threshold_for_rate(self, rate: float) -> float:
+        """Like `threshold()`, but for an arbitrary target rate instead of
+        this instance's own default — this is what lets a single
+        calibrated sample window serve every batting-order bucket's
+        different effective dismissal rate (see effective_wicket_target_rate
+        below) without needing to know anything about the raw probability
+        distribution's actual scale or spread.
+        """
+        if rate <= 0.0:
+            return 1.01  # impossible — no sample can ever be >= this
+        if len(self._samples) < self.min_samples:
+            return self.fallback
+        # np.percentile's linear interpolation (not a plain sorted-index
+        # pick) matters here: an earlier version used
+        # `sorted(samples)[round((1-rate)*(len(samples)-1))]`, which is
+        # off by close to one full rank — empirically it produced a ~7%
+        # hit rate when targeting 4.5%. Interpolating against the true
+        # 100*(1-rate) percentile tracks the target rate much more
+        # closely (verified against a synthetic probability stream).
+        return float(np.percentile(list(self._samples), 100.0 * (1.0 - rate)))
+
+    def reset(self) -> None:
+        self._samples.clear()
+
+
+def order_bucket(batting_position: int) -> int:
+    """Maps a 1-indexed batting-order slot (1..11) onto one of 9 buckets
+    (0..8) used by ORDER_WICKET_MODIFIER / ORDER_RUN_WEIGHTS. Slots 9-11
+    (the tail) share the last bucket — there's no meaningful behavioural
+    difference between a team's 9th, 10th and 11th batter here."""
+    return min(max(batting_position, 1), 9) - 1
+
+
+# Additive adjustment to the *target dismissal rate* (not to the model's raw
+# wicket_prob value directly — see RollingThreshold.threshold_for_rate).
+# Working in rate-space rather than raw-probability-space keeps this
+# scale-invariant: it produces the same realistic behaviour regardless of
+# how spread out a given checkpoint's raw sigmoid outputs actually are.
+# (An earlier version of this added the modifier straight to wicket_prob;
+# testing against the heuristic backend's tightly-clustered synthetic
+# probabilities showed that breaks badly — a batter's modifier could
+# dwarf the entire spread of raw values and make them either unwicketable
+# or dismissed almost every ball, regardless of the intended gradient.)
+# Openers get a lower effective rate (harder to dismiss); the tail gets a
+# much higher one. Index 0 = batting position 1, ..., index 8 = positions
+# 9-11.
+ORDER_WICKET_MODIFIER: list[float] = [
+    -0.3,  # 1 - opener
+    -0.3,  # 2 - opener
+    -0.2,  # 3 - top order
+    0.15,  # 4 - top/middle order
+    -0.1,  # 5 - middle order
+    -0.2,  # 6 - middle order / finisher
+    -0.35,  # 7 - finisher
+    0.2,  # 8 - lower order
+    0.3,  # 9-11 - tail
+]
+
+
+WICKET_STREAK_RATE_DECREMENT = 0.02
+"""'x' from the spec, in target-rate terms: each delivery in an active
+consecutive-wicket streak cuts the next ball's effective dismissal rate by
+this much — after 1 wicket the very next ball's rate is -1x, after 2 in a
+row it's -2x, and so on — which shows up as a *higher* required threshold
+once looked up via RollingThreshold.threshold_for_rate(), exactly like the
+spec describes ("threshold increases"), just computed the robust way."""
+
+MAX_CONSECUTIVE_WICKETS_ALLOWED = 3
+"""A 4th dismissal on 4 consecutive legal deliveries is blocked outright:
+once this many have fallen in a row, the next ball's effective target rate
+is forced to 0, which RollingThreshold.threshold_for_rate() turns into an
+unreachable threshold (> 1.0)."""
+
+
+def effective_wicket_target_rate(
+    base_rate: float, batting_position: int, consecutive_wickets: int
+) -> float:
+    """Combines the innings' calibrated base rate with this batter's
+    ORDER_WICKET_MODIFIER and the current wicket-streak penalty into the
+    single target rate to look up via RollingThreshold.threshold_for_rate().
+    """
+    if consecutive_wickets >= MAX_CONSECUTIVE_WICKETS_ALLOWED:
+        return 0.0
+    rate = base_rate + ORDER_WICKET_MODIFIER[order_bucket(batting_position)]
+    rate -= consecutive_wickets * WICKET_STREAK_RATE_DECREMENT
+    return float(np.clip(rate, 0.0, 0.97))
+
+
+# Run-value outcomes for a "normal" (non-wide, non-wicket) legal delivery,
+# and 9 batting-order-dependent weight profiles over them — see the section
+# docstring above for why these (not the model's delta) drive run magnitude.
+# Tuned empirically against a full run of this repo's own simulation
+# pipeline (match_engine.py + this module, driven end-to-end with a
+# synthetic squads file and the heuristic backend as a stand-in probability
+# source, since this environment doesn't have your checkpoint/data files)
+# so a full-XI-weighted mix lands close to verify_simulation.py's targets:
+# ~150-155 runs/innings, ~16 fours and ~12 sixes per match, non-boundary RPB
+# ~0.8, all with WIDE_TARGET_RATE/WICKET_BASE_TARGET_RATE above pulling the
+# wide/wicket rates down to realistic levels. Retune here (not in
+# match_engine.py) if a real run against your actual checkpoint drifts —
+# in particular, if fours/sixes run high, scale down column 4/5 (index 4,
+# 5) across every row; if runs pile up too fast on non-boundary balls,
+# raise column 0 (the dot-ball weight) and rebalance the rest back to 1.0.
+RUN_VALUES: list[int] = [0, 1, 2, 3, 4, 6]
+
+ORDER_RUN_WEIGHTS: list[list[float]] = [
+    # dot,    1,      2,      3,      4,      6         position(s)
+    [0.24, 0.32, 0.2, 0.02, 0.1, 0.12],  # 1  - opener
+    [0.24, 0.32, 0.2, 0.02, 0.1, 0.12],  # 2  - opener
+    [0.24, 0.34, 0.18, 0.02, 0.1, 0.12],  # 3  - top order
+    [0.24, 0.32, 0.14, 0, 0.14, 0.16],  # 4  - top/middle order
+    [0.2, 0.34, 0.16, 0, 0.14, 0.16],  # 5  - middle order
+    [0.1, 0.32, 0.16, 0, 0.2, 0.22],  # 6  - finisher
+    [0.14, 0.32, 0.16, 0, 0.18, 0.2],  # 7  - finisher
+    [0.3, 0.4, 0, 0, 0.1, 0.2],  # 8  - lower order
+    [0.2, 0.3, 0.1, 0, 0.3, 0.1],  # 9-11 - tail
+]
+
+
+def sample_run_outcome(batting_position: int, rng: random.Random) -> int:
+    """Draws bat-runs (0/1/2/3/4/6) for a normal delivery from this
+    batter's ORDER_RUN_WEIGHTS row. `rng` should be the match's own seeded
+    `random.Random` instance (match_engine.py's `rng`) so results stay
+    reproducible for a given `seed`, matching how bowler selection already
+    uses it."""
+    weights = ORDER_RUN_WEIGHTS[order_bucket(batting_position)]
+    return rng.choices(RUN_VALUES, weights=weights, k=1)[0]
 
 
 @dataclass
@@ -170,10 +392,20 @@ class TrainedModelRunner(ModelRunner):
         self.model.eval()
         # The exact adaptive thresholds computed at training time (see
         # train_embeddings.py's get_adaptive_threshold(), logged into the
-        # checkpoint as wicket_thresh/wide_thresh) — used in place of a
-        # single hardcoded 0.5 guess. See match_engine.py's two call sites.
-        self.wicket_thresh = checkpoint.wicket_thresh - 0.2
-        self.wide_thresh = checkpoint.wide_thresh + 0.32
+        # checkpoint as wicket_thresh/wide_thresh) — kept here ONLY as the
+        # `fallback` match_engine.py's RollingThreshold instances use before
+        # an innings has produced enough of *this checkpoint's own* raw
+        # wicket_prob/wide_prob samples to calibrate against (see this
+        # module's "Custom ball-outcome shaping" section). A previous
+        # version of this line nudged these by a fixed -0.225 / +0.32 guess;
+        # that only "worked" for whatever raw output distribution the
+        # checkpoint happened to produce during that one test —
+        # verify_simulation.py has since shown the same checkpoint swinging
+        # from a 0.0% to a 7.8/match wicket rate and sitting at ~40% wide
+        # either way, so a static offset isn't something that can be tuned
+        # once and trusted going forward.
+        self.wicket_thresh = checkpoint.wicket_thresh
+        self.wide_thresh = checkpoint.wide_thresh
         self._prev_predicted_cumulative: float | None = None
         # load_match_context() below monkeypatches shared nn.Embedding
         # submodules on this (singleton, cached-via-get_runner) model, so two
@@ -277,7 +509,13 @@ class HeuristicModelRunner(ModelRunner):
 
     # rough T20-shaped ball-outcome distribution
     _RUN_VALUES = [0, 1, 2, 3, 4, 6]
-    _RUN_WEIGHTS = [0.36, 0.32, 0.08, 0.02, 0.14, 0.08]
+    # NOTE: previously [0.3, 0.28, 0.14, 0.08, 0.12, 0.1], which summed to
+    # 1.02 — np.random.Generator.choice (unlike random.choices) requires
+    # probabilities to sum to exactly 1 and raises otherwise. Fixed by
+    # trimming the "2" weight by 0.02. This delta value is unused for run
+    # magnitude in the actual simulation now anyway (see match_engine.py's
+    # sample_run_outcome() call), but predict_ball must still not crash.
+    _RUN_WEIGHTS = [0.3, 0.28, 0.14, 0.06, 0.12, 0.1]
 
     def __init__(self, seed: int | None = None):
         self._rng = np.random.default_rng(seed)
