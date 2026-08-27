@@ -350,9 +350,9 @@ def check_api():
 
 if __name__ == "__main__":
     print(f"model backend in use: {me.get_runner().backend_name}\n")
-    # check_squads()
-    # check_matches()
+    check_squads()
+    check_matches()
     check_realism_stats()
     check_performance()
-    # check_api()
+    check_api()
     print("\nAll checks passed.")
