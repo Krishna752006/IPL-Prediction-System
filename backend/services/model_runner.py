@@ -188,7 +188,7 @@ WIDE_TARGET_RATE = 0.045
 """Fixed probability (independent Bernoulli draw, see sample_wide) that any
 given delivery *attempt* is called a wide. Real T20 cricket runs ~4-5%."""
 
-MODEL_BLEND_RATE = 0.2
+MODEL_BLEND_RATE = 0.05
 """Fraction of balls whose outcome is decided from the trained
 checkpoint's own raw outputs (see wide_from_model / wicket_from_model /
 runs_from_delta below) instead of the fixed heuristic tables in this
