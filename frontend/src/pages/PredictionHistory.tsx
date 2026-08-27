@@ -29,7 +29,8 @@ const PredictionHistory: React.FC = () => {
           setHistory(existing);
         } else {
           // Fetch authenticated user data from backend
-          const response = await fetch('http://localhost:8000/prediction-history', {
+          const s = import.meta.env.VITE_BASE_URL + "/prediction-history"
+          const response = await fetch(s, {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
