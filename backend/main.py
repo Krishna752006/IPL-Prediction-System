@@ -16,10 +16,7 @@ security = HTTPBearer()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "https://kc-ipl-prediction.vercel.app"
-    ],
+    allow_origins=["http://localhost:5173", "https://kc-ipl-prediction.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
