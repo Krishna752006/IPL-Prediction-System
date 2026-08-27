@@ -36,12 +36,10 @@ from services.bowler_selector import BowlerUsage, pick_next_bowler
 from services.feature_builder import BallContext, _rr_momentum, build_ball_features
 from services.match_state import BatterInnings, BowlerInnings, InningsState, MatchResult
 from services.model_runner import (
-    WICKET_BASE_TARGET_RATE,
-    WIDE_TARGET_RATE,
-    RollingThreshold,
-    effective_wicket_target_rate,
     get_runner,
     sample_run_outcome,
+    sample_wicket,
+    sample_wide,
 )
 from services.squads import Player, Team, get_team
 
@@ -112,26 +110,13 @@ def _simulate_innings(
     if hasattr(runner, "reset_innings"):
         runner.reset_innings()
 
-    # Recalibrated fresh each innings, from this innings' own raw
-    # wicket_prob/wide_prob samples — see model_runner.py's "Custom
-    # ball-outcome shaping" section for why this replaced a fixed offset.
-    # Falls back to the runner's static wicket_thresh/wide_thresh (the
-    # checkpoint's own values, for TrainedModelRunner) until enough samples
-    # have been observed this innings.
-    wide_calibrator = RollingThreshold(WIDE_TARGET_RATE, fallback=runner.wide_thresh)
-    wicket_calibrator = RollingThreshold(
-        WICKET_BASE_TARGET_RATE, fallback=runner.wicket_thresh
-    )
-
-    # Runaway-model safety valve, discovered while testing the checkpoint
-    # loading change: wides don't consume a legal ball
-    # (innings.balls_in_current_over never increments), so if the model's
-    # raw wide_prob sits above every realistic threshold on nearly every
-    # ball, the inner ball loop below can spin forever and hang the
-    # request. The rolling calibration above makes this far less likely in
-    # practice (it targets ~WIDE_TARGET_RATE regardless of the checkpoint's
-    # raw scale), but the valve stays as defense-in-depth: a real innings
-    # rarely needs more than ~135-150 total attempts for 120 legal balls.
+    # Runaway-loop safety valve — kept as defense-in-depth even though wide
+    # is now a flat-rate Bernoulli draw (sample_wide) that should never get
+    # "stuck": wides don't consume a legal ball
+    # (innings.balls_in_current_over never increments), so any future
+    # regression that pushes the wide rate up could otherwise spin this
+    # loop indefinitely and hang the request. A real innings needs at most
+    # ~130-140 total attempts for 120 legal balls at a ~4-5% wide rate.
     MAX_BALL_ATTEMPTS = 150
     ball_attempts = 0
 
@@ -156,13 +141,13 @@ def _simulate_innings(
             if ball_attempts > MAX_BALL_ATTEMPTS:
                 logger.warning(
                     "Innings %d hit MAX_BALL_ATTEMPTS (%d) without completing "
-                    "120 legal balls — wide_prob is very likely stuck above "
-                    "the current calibrated wide threshold (%.4f) on nearly "
-                    "every ball (miscalibrated or untrained checkpoint?). "
+                    "120 legal balls. This shouldn't happen with a flat-rate "
+                    "wide draw (see model_runner.sample_wide) — if it does, "
+                    "something upstream (bowler selection stalling, a bad "
+                    "WIDE_TARGET_RATE edit, etc.) needs investigating. "
                     "Ending the innings early instead of hanging the request.",
                     innings.inning_no,
                     MAX_BALL_ATTEMPTS,
-                    wide_calibrator.threshold(),
                 )
                 return
 
@@ -215,38 +200,31 @@ def _simulate_innings(
             numerical_sequence = np.stack(innings.numerical_buffer)
             categorical_sequence = np.stack(innings.categorical_buffer)
 
-            delta, wicket_prob, wide_prob = runner.predict_ball(
+            # Still called every ball (so verify_simulation.py's PERF
+            # section keeps profiling the model's real forward-pass cost),
+            # but none of its three return values feed into the outcome
+            # decisions below anymore — see model_runner.py's "Custom
+            # ball-outcome shaping" section docstring for why: a full run
+            # against the actual trained_model checkpoint showed
+            # wicket_prob/wide_prob drift across an innings rather than
+            # holding a stable level, which broke both a fixed threshold
+            # and a rolling recalibrated one. `delta` was already unused
+            # (the score head has no reliable per-ball resolution).
+            _delta, _wicket_prob, _wide_prob = runner.predict_ball(
                 numerical_sequence,
                 categorical_sequence,
                 score_before=float(innings.score),
             )
-            # `delta` (the model's own per-ball score estimate) is
-            # deliberately not used for run magnitude below — see
-            # TrainedModelRunner's docstring: the score head has no
-            # reliable per-ball resolution. Run magnitude instead comes
-            # from model_runner.sample_run_outcome()'s batting-order-aware
-            # weights. wicket_prob/wide_prob are still the model's own
-            # signal, just recalibrated against this innings' own recent
-            # output instead of a static guessed threshold (see
-            # model_runner.py's "Custom ball-outcome shaping" section).
-            wide_calibrator.observe(wide_prob)
-            wicket_calibrator.observe(wicket_prob)
 
-            if wide_prob >= wide_calibrator.threshold():
+            if sample_wide(rng):
                 innings.score += 1
                 current_bowler.runs_conceded += 1
                 # wide: no legal ball consumed, no strike change, bowler continues
                 continue
 
             striker_position = innings.striker.order_position
-            target_rate = effective_wicket_target_rate(
-                wicket_calibrator.target_rate,
-                striker_position,
-                innings.consecutive_wickets,
-            )
-            effective_wicket_thresh = wicket_calibrator.threshold_for_rate(target_rate)
 
-            if wicket_prob >= effective_wicket_thresh:
+            if sample_wicket(rng, striker_position, innings.consecutive_wickets):
                 innings.striker.balls += 1
                 innings.striker.is_out = True
                 innings.striker.dismissal = f"b {bowler_player.name}"

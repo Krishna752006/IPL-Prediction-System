@@ -124,69 +124,106 @@ def _sigmoid(x: float) -> float:
 # The checkpoint's raw wicket_prob / wide_prob outputs don't sit at any
 # absolute level we can predict ahead of time — verify_simulation.py has
 # shown the *same* checkpoint swing from a 0.0% to a 7.8/match wicket rate
-# across two runs, while wide sits stuck around 40% either way. A fixed
-# offset added to a threshold (the old `checkpoint.wicket_thresh - 0.225` /
-# `+ 0.32`) only "worked" for whatever raw distribution the checkpoint
-# happened to produce that one time; it silently breaks the moment the
-# distribution drifts, which is exactly what's been observed. So instead:
+# across two runs, with wide sitting stuck around 40-45% throughout. A first
+# fix here tried a rolling, self-calibrating threshold (RollingThreshold,
+# still below) that recalibrated itself from the model's own recent output
+# each innings instead of trusting a fixed offset — but a full run against
+# the real trained_model checkpoint showed even that isn't enough: the
+# calibrated wide threshold itself swung wildly innings to innings (0.38 up
+# to 0.92), and MAX_BALL_ATTEMPTS kept tripping with "wide_prob stuck above
+# threshold on nearly every ball" — while wicket stayed at a flat 0.0% every
+# single match. Both symptoms point the same way: this checkpoint's raw
+# wicket_prob/wide_prob aren't a stationary per-ball signal at all — they
+# drift across an innings (plausibly hidden-state drift in an undertrained
+# sequence model as the ball-sequence grows longer), which breaks *any*
+# threshold comparison, fixed or adaptive, since a threshold set from
+# "recent" samples is chasing a moving target.
 #
-#   1. Both thresholds are now recalibrated continuously, per innings, from
-#      a rolling window of the model's OWN recent raw output (RollingThreshold
-#      below) — targeting a realistic real-world rate rather than trusting
-#      the checkpoint's absolute scale.
-#   2. On top of that calibrated wicket threshold, the cricket-domain rules
-#      requested are layered in: a batting-order-dependent chance modifier
-#      (openers are harder to dismiss, tail easier) and a streak penalty
-#      that makes an immediate follow-up wicket progressively rarer, with a
-#      4th in a row blocked outright.
-#   3. Run *magnitude* on a normal ball is no longer derived from the
-#      model's own delta at all (see TrainedModelRunner's docstring — the
-#      score head has no reliable per-ball resolution) but sampled from a
-#      batting-order-aware weight table, which is what actually controls
-#      fours/sixes/strike-rotation realism.
+# So wide/wicket decisions are no longer based on wicket_prob/wide_prob at
+# all. Instead:
+#
+#   1. Both are independent, seeded Bernoulli draws at a fixed target rate
+#      (sample_wide / sample_wicket below) — correct by construction
+#      regardless of what this checkpoint's classification heads do.
+#   2. The cricket-domain rules requested are layered directly into the
+#      wicket draw's own probability: a batting-order-dependent chance
+#      modifier (openers harder to dismiss, tail easier) and a streak
+#      penalty that makes an immediate follow-up wicket progressively
+#      rarer, with a 4th in a row blocked outright.
+#   3. Run *magnitude* on a normal ball is, likewise, no longer derived
+#      from the model's own delta (see TrainedModelRunner's docstring —
+#      the score head has no reliable per-ball resolution) but sampled
+#      from a batting-order-aware weight table.
+#
+# RollingThreshold is kept below (unused by match_engine.py's decision path
+# now) in case a retrained/fixed checkpoint someday produces a genuinely
+# stationary signal worth calibrating against — see its docstring.
+#
+# IMPORTANT — a footgun to avoid when editing ORDER_WICKET_MODIFIER: every
+# bucket's `WICKET_BASE_TARGET_RATE + modifier` must stay comfortably above
+# 0. If any bucket's effective rate clips to 0 (or goes negative),
+# effective_wicket_target_rate() correctly reports "impossible to dismiss"
+# for that bucket — which sounds fine until you remember batters go in
+# order: if an EARLY position (especially 1 or 2) is unwicketable, that
+# batter simply never gets out, no one after them ever comes to the crease,
+# and the whole innings — every ball, both innings, every match — plays out
+# entirely on that one batter's run-weight row. That's exactly what
+# produced a real 0.0-wickets-every-match result here: two early buckets
+# had modifiers negative enough to push their effective rate below zero.
+# Keep the modifier array roughly monotonic increasing (openers lowest,
+# tail highest) and sanity-check every `base_rate + modifier` is > 0 (e.g.
+# print effective_wicket_target_rate(base, pos, 0) for pos in 1..11) before
+# trusting a new set of values.
 #
 # match_engine.py owns the per-ball loop and the innings state (who's on
 # strike, how many wickets just fell in a row), so it calls the helpers
 # below explicitly, ball by ball. ModelRunner.predict_ball's own contract —
 # return the model's raw (delta, wicket_prob, wide_prob) — is left
-# untouched so nothing else that depends on it (e.g.
-# verify_simulation.py's profiling patch of TrainedModelRunner.predict_ball)
-# breaks.
+# untouched (and match_engine.py still calls it every ball, so
+# verify_simulation.py's PERF-section profiling of the model's own forward
+# pass keeps working), it's just that none of its three return values feed
+# into the outcome decisions below anymore.
 
 WIDE_TARGET_RATE = 0.045
-"""Target fraction of delivery *attempts* that should be called a wide.
-Real T20 cricket runs ~4-5%; retune if verify_simulation.py's wide% drifts
-noticeably from this after a checkpoint change."""
+"""Fixed probability (independent Bernoulli draw, see sample_wide) that any
+given delivery *attempt* is called a wide. Real T20 cricket runs ~4-5%."""
 
-WICKET_BASE_TARGET_RATE = 0.035
+WICKET_BASE_TARGET_RATE = 0.05
 """Target fraction of legal balls that end in a dismissal for an
 "average" (bucket-3-ish, modifier ~0) batter, before the order/streak
-adjustments below are layered on. Lands around 7-8 wickets/innings across
+adjustments below are layered on. Lands around 6-7 wickets/innings across
 a full XI — see ORDER_WICKET_MODIFIER for how this shifts by batting
-position. (Empirically tuned against a full run of the simulation
-pipeline — see the module-level note above ORDER_RUN_WEIGHTS.)"""
+position, and the footgun warning above before editing it. (Empirically
+tuned via a full run of the actual simulation pipeline, using
+sample_wicket()'s exact Bernoulli draw — the achieved rate now matches
+this number directly, unlike the earlier percentile-calibration approach
+whose achieved rate could drift from its nominal target.)"""
 
 CALIBRATION_WINDOW = 40
-"""How many of the model's most recent raw probability samples (this
-innings) a RollingThreshold calibrates against."""
+"""RollingThreshold window size — unused by the current sample_wide/
+sample_wicket decision path (see this section's docstring); kept for the
+class itself, which is no longer wired into match_engine.py."""
 
 MIN_CALIBRATION_SAMPLES = 15
-"""Below this many samples, RollingThreshold hasn't seen enough of this
-innings' own output yet and uses its static `fallback` instead (the
-checkpoint's own wicket_thresh/wide_thresh, or ml_config's defaults for the
-heuristic backend)."""
+"""See CALIBRATION_WINDOW — same "kept but currently unused" status."""
 
 
 class RollingThreshold:
-    """A threshold that recalibrates itself so that, of the model's own
-    recent raw probability outputs *this innings*, roughly `target_rate` of
-    them sit at or above it — rather than comparing against a fixed number
-    that assumes a raw-output distribution/scale we have no way to verify
-    ahead of time for a given checkpoint.
+    """A threshold that recalibrates itself so that, of a stream of raw
+    probability outputs, roughly `target_rate` of them sit at or above it —
+    rather than comparing against a fixed number that assumes a raw-output
+    distribution/scale known ahead of time.
 
-    Not thread-shared: match_engine.py creates one pair of these (wide,
-    wicket) per innings, matching TrainedModelRunner's own per-match lock
-    and reset_innings() lifecycle.
+    NOT currently used by match_engine.py's wide/wicket decisions — a full
+    run against the real trained_model checkpoint showed its raw
+    wicket_prob/wide_prob outputs drift across an innings rather than
+    fluctuating around a stable level, which defeats windowed-percentile
+    calibration just as badly as a fixed threshold (see this module's
+    "Custom ball-outcome shaping" docstring for the evidence). Kept here in
+    case a future, better-behaved checkpoint's output is worth calibrating
+    against again — swap sample_wide/sample_wicket's Bernoulli draws back
+    out for `wide_prob >= RollingThreshold(...).threshold()`-style calls if
+    so, using this class unchanged.
     """
 
     def __init__(
@@ -209,27 +246,22 @@ class RollingThreshold:
 
     def threshold_for_rate(self, rate: float) -> float:
         """Like `threshold()`, but for an arbitrary target rate instead of
-        this instance's own default — this is what lets a single
-        calibrated sample window serve every batting-order bucket's
-        different effective dismissal rate (see effective_wicket_target_rate
-        below) without needing to know anything about the raw probability
-        distribution's actual scale or spread.
-        """
+        this instance's own default."""
         if rate <= 0.0:
             return 1.01  # impossible — no sample can ever be >= this
         if len(self._samples) < self.min_samples:
             return self.fallback
-        # np.percentile's linear interpolation (not a plain sorted-index
-        # pick) matters here: an earlier version used
-        # `sorted(samples)[round((1-rate)*(len(samples)-1))]`, which is
-        # off by close to one full rank — empirically it produced a ~7%
-        # hit rate when targeting 4.5%. Interpolating against the true
-        # 100*(1-rate) percentile tracks the target rate much more
-        # closely (verified against a synthetic probability stream).
         return float(np.percentile(list(self._samples), 100.0 * (1.0 - rate)))
 
     def reset(self) -> None:
         self._samples.clear()
+
+
+def sample_wide(rng: random.Random) -> bool:
+    """Independent Bernoulli draw at WIDE_TARGET_RATE. `rng` should be the
+    match's own seeded `random.Random` (match_engine.py's `rng`) so results
+    stay reproducible for a given `seed`."""
+    return rng.random() < WIDE_TARGET_RATE
 
 
 def order_bucket(batting_position: int) -> int:
@@ -240,59 +272,68 @@ def order_bucket(batting_position: int) -> int:
     return min(max(batting_position, 1), 9) - 1
 
 
-# Additive adjustment to the *target dismissal rate* (not to the model's raw
-# wicket_prob value directly — see RollingThreshold.threshold_for_rate).
-# Working in rate-space rather than raw-probability-space keeps this
-# scale-invariant: it produces the same realistic behaviour regardless of
-# how spread out a given checkpoint's raw sigmoid outputs actually are.
-# (An earlier version of this added the modifier straight to wicket_prob;
-# testing against the heuristic backend's tightly-clustered synthetic
-# probabilities showed that breaks badly — a batter's modifier could
-# dwarf the entire spread of raw values and make them either unwicketable
-# or dismissed almost every ball, regardless of the intended gradient.)
-# Openers get a lower effective rate (harder to dismiss); the tail gets a
-# much higher one. Index 0 = batting position 1, ..., index 8 = positions
-# 9-11.
+# Additive adjustment to the *target dismissal rate* (a probability,
+# 0..1-ish — not a raw model output). Openers get a lower effective rate
+# (harder to dismiss); the tail gets a much higher one. Index 0 = batting
+# position 1, ..., index 8 = positions 9-11.
+#
+# Keep this roughly monotonic increasing and make sure every
+# WICKET_BASE_TARGET_RATE + modifier stays > 0 — see the footgun warning in
+# this section's docstring above. (A previous edit to this array set
+# several early/middle positions' modifiers low enough that their combined
+# rate clipped to exactly 0, which doesn't fail loudly — it just makes that
+# batter immortal, and since batters go in order, the entire innings played
+# out on the two openers alone: 0 wickets in 100/100 real-checkpoint test
+# matches.)
 ORDER_WICKET_MODIFIER: list[float] = [
-    -0.3,  # 1 - opener
-    -0.3,  # 2 - opener
-    -0.2,  # 3 - top order
-    0.15,  # 4 - top/middle order
-    -0.1,  # 5 - middle order
-    -0.2,  # 6 - middle order / finisher
-    -0.35,  # 7 - finisher
-    0.2,  # 8 - lower order
-    0.3,  # 9-11 - tail
+    -0.02,  # 1 - opener
+    -0.02,  # 2 - opener
+    0,  # 3 - top order
+    0.07,  # 4 - top/middle order
+    0.1,  # 5 - middle order
+    0.12,  # 6 - middle order / finisher
+    0.14,  # 7 - finisher
+    0.1,  # 8 - lower order
+    0.1,  # 9-11 - tail
 ]
 
 
 WICKET_STREAK_RATE_DECREMENT = 0.02
-"""'x' from the spec, in target-rate terms: each delivery in an active
-consecutive-wicket streak cuts the next ball's effective dismissal rate by
-this much — after 1 wicket the very next ball's rate is -1x, after 2 in a
-row it's -2x, and so on — which shows up as a *higher* required threshold
-once looked up via RollingThreshold.threshold_for_rate(), exactly like the
-spec describes ("threshold increases"), just computed the robust way."""
+"""'x' from the spec: each delivery in an active consecutive-wicket streak
+cuts the next ball's effective dismissal rate by this much — after 1
+wicket the very next ball's rate is -1x, after 2 in a row it's -2x, and so
+on — making an immediate follow-up wicket progressively (not impossibly)
+harder."""
 
 MAX_CONSECUTIVE_WICKETS_ALLOWED = 3
 """A 4th dismissal on 4 consecutive legal deliveries is blocked outright:
 once this many have fallen in a row, the next ball's effective target rate
-is forced to 0, which RollingThreshold.threshold_for_rate() turns into an
-unreachable threshold (> 1.0)."""
+is forced to 0 — see sample_wicket, which treats a 0 rate as "never"."""
 
 
 def effective_wicket_target_rate(
     base_rate: float, batting_position: int, consecutive_wickets: int
 ) -> float:
-    """Combines the innings' calibrated base rate with this batter's
-    ORDER_WICKET_MODIFIER and the current wicket-streak penalty into the
-    single target rate to look up via RollingThreshold.threshold_for_rate().
-    """
+    """Combines the base rate with this batter's ORDER_WICKET_MODIFIER and
+    the current wicket-streak penalty into the single probability
+    sample_wicket() draws against."""
     if consecutive_wickets >= MAX_CONSECUTIVE_WICKETS_ALLOWED:
         return 0.0
     rate = base_rate + ORDER_WICKET_MODIFIER[order_bucket(batting_position)]
     rate -= consecutive_wickets * WICKET_STREAK_RATE_DECREMENT
     return float(np.clip(rate, 0.0, 0.97))
+
+
+def sample_wicket(
+    rng: random.Random, batting_position: int, consecutive_wickets: int
+) -> bool:
+    """Independent Bernoulli draw at this ball's effective_wicket_target_rate.
+    `rng` should be the match's own seeded `random.Random`, matching
+    sample_wide()."""
+    rate = effective_wicket_target_rate(
+        WICKET_BASE_TARGET_RATE, batting_position, consecutive_wickets
+    )
+    return rng.random() < rate
 
 
 # Run-value outcomes for a "normal" (non-wide, non-wicket) legal delivery,
