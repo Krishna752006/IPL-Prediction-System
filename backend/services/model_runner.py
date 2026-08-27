@@ -188,6 +188,25 @@ WIDE_TARGET_RATE = 0.045
 """Fixed probability (independent Bernoulli draw, see sample_wide) that any
 given delivery *attempt* is called a wide. Real T20 cricket runs ~4-5%."""
 
+MODEL_BLEND_RATE = 0.5
+"""Fraction of balls whose outcome is decided from the trained
+checkpoint's own raw outputs (see wide_from_model / wicket_from_model /
+runs_from_delta below) instead of the fixed heuristic tables in this
+section. Requested explicitly, despite the instability documented
+above: raw wicket_prob/wide_prob drift across an innings rather than
+holding a stable level, and the score head's delta moves in tiny,
+slow increments almost every ball. So expect model-decided balls to
+look different in character from heuristic-decided balls — skewed
+toward 0s/1s, with wicket/wide rates that can vary innings to innings
+depending on where in its drift this checkpoint's output happens to
+sit. Set to 0.0 to fully disable model-driven balls, 1.0 to run the
+model exclusively. This also directly trades off latency: each ball
+that lands on the model path pays for a real forward pass through the
+transformer + two LSTMs (see match_engine.py's per-ball loop), so
+raising this back toward 1.0 reintroduces the per-request cost that
+was previously removed for CPU-constrained deploys.
+"""
+
 WICKET_BASE_TARGET_RATE = 0.05
 """Target fraction of legal balls that end in a dismissal for an
 "average" (bucket-3-ish, modifier ~0) batter, before the order/streak
@@ -361,8 +380,8 @@ ORDER_RUN_WEIGHTS: list[list[float]] = [
     [0.24, 0.32, 0.14, 0, 0.14, 0.16],  # 4  - top/middle order
     [0.2, 0.34, 0.16, 0, 0.14, 0.16],  # 5  - middle order
     [0.1, 0.32, 0.16, 0, 0.2, 0.22],  # 6  - finisher
-    [0.18, 0.33, 0.16, 0, 0.15, 0.15],  # 7  - finisher
-    [0.3, 0.43, 0, 0, 0.12, 0.15],  # 8  - lower order
+    [0.14, 0.32, 0.16, 0, 0.18, 0.2],  # 7  - finisher
+    [0.3, 0.4, 0, 0, 0.1, 0.2],  # 8  - lower order
     [0.42, 0.32, 0.08, 0, 0.12, 0.06],  # 9-11 - tail
 ]
 
@@ -375,6 +394,50 @@ def sample_run_outcome(batting_position: int, rng: random.Random) -> int:
     uses it."""
     weights = ORDER_RUN_WEIGHTS[order_bucket(batting_position)]
     return rng.choices(RUN_VALUES, weights=weights, k=1)[0]
+
+
+# =============================================================================
+# Model-path equivalents (MODEL_BLEND_RATE) — same three decisions as
+# above (wide / wicket / run magnitude), but driven directly from the
+# trained checkpoint's own raw predict_ball() output instead of the fixed
+# heuristic tables. See MODEL_BLEND_RATE's docstring for the known
+# instability this reintroduces.
+# =============================================================================
+
+
+def wide_from_model(wide_prob: float, wide_thresh: float) -> bool:
+    """Model-path equivalent of sample_wide(): a ball is called wide when
+    the checkpoint's own sigmoid output clears its threshold (the
+    checkpoint's adaptive wide_thresh — see ModelRunner's docstring —
+    rather than a flat-rate Bernoulli draw)."""
+    return wide_prob >= wide_thresh
+
+
+def wicket_from_model(
+    wicket_prob: float, wicket_thresh: float, consecutive_wickets: int
+) -> bool:
+    """Model-path equivalent of sample_wicket(). MAX_CONSECUTIVE_WICKETS_ALLOWED
+    still applies here regardless of which path decided the previous
+    balls in the streak — it's a cricket-domain / loop-safety rule, not
+    something either outcome source owns individually."""
+    if consecutive_wickets >= MAX_CONSECUTIVE_WICKETS_ALLOWED:
+        return False
+    return wicket_prob >= wicket_thresh
+
+
+_DELTA_RUN_BUCKETS = np.array([0, 1, 2, 3, 4, 6], dtype=np.float64)
+
+
+def runs_from_delta(delta: float) -> int:
+    """Model-path equivalent of sample_run_outcome(): snaps the score
+    head's continuous per-ball delta onto the nearest legal run value
+    (0/1/2/3/4/6). NOTE — TrainedModelRunner's own docstring flags that
+    this delta moves in tiny, slow increments almost every ball (the
+    score head was never trained on a per-ball-sensitive target), so in
+    practice this will skew heavily toward 0/1. That's this checkpoint's
+    real resolution showing through, not a bug in this function."""
+    idx = int(np.argmin(np.abs(_DELTA_RUN_BUCKETS - delta)))
+    return int(_DELTA_RUN_BUCKETS[idx])
 
 
 @dataclass

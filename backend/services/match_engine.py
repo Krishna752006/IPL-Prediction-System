@@ -36,34 +36,18 @@ from services.bowler_selector import BowlerUsage, pick_next_bowler
 from services.feature_builder import BallContext, _rr_momentum, build_ball_features
 from services.match_state import BatterInnings, BowlerInnings, InningsState, MatchResult
 from services.model_runner import (
+    MODEL_BLEND_RATE,
     get_runner,
+    runs_from_delta,
     sample_run_outcome,
     sample_wicket,
     sample_wide,
+    wicket_from_model,
+    wide_from_model,
 )
 from services.squads import Player, Team, get_team
 
 logger = logging.getLogger(__name__)
-
-# PERF FIX (see the predict_ball() call below): the trained model's own
-# forward pass is expensive (a 2-layer Transformer + two LSTMs) and used
-# to run unconditionally on every single ball of the simulation - up to
-# ~300 forward passes for a full two-innings match - even though none of
-# its three outputs (delta/wicket_prob/wide_prob) feed into any outcome
-# decision anymore (see model_runner.py's "Custom ball-outcome shaping"
-# section for why: this checkpoint's raw outputs drift across an innings,
-# so runs/wickets/wides are drawn from the fixed heuristic tables in that
-# file instead). That made every real /predict-1-match request pay the
-# full cost of a computation whose result was thrown away - fine on a
-# fast local CPU, but on a CPU-throttled deploy target (e.g. a
-# fraction-of-a-core hosting plan) that waste is exactly what turns a
-# ~5s local prediction into 60s+ in production.
-#
-# Set this True to restore the old always-on behaviour (e.g. from
-# verify_simulation.py's PERF section, which wants to profile the model's
-# real forward-pass cost) - leave it False for normal /predict-1-match
-# traffic.
-RUN_MODEL_INFERENCE = False
 
 
 def _resolve_toss(team_a: str, team_b: str, rng: random.Random) -> tuple[str, str]:
@@ -220,31 +204,47 @@ def _simulate_innings(
             numerical_sequence = np.stack(innings.numerical_buffer)
             categorical_sequence = np.stack(innings.categorical_buffer)
 
-            # See RUN_MODEL_INFERENCE above: skipped by default because
-            # none of these three return values feed into the outcome
-            # decisions below anymore — see model_runner.py's "Custom
-            # ball-outcome shaping" section docstring for why: a full run
-            # against the actual trained_model checkpoint showed
-            # wicket_prob/wide_prob drift across an innings rather than
-            # holding a stable level, which broke both a fixed threshold
-            # and a rolling recalibrated one. `delta` was already unused
-            # (the score head has no reliable per-ball resolution).
-            if RUN_MODEL_INFERENCE:
-                runner.predict_ball(
+            striker_position = innings.striker.order_position
+
+            # Per-ball blend (MODEL_BLEND_RATE, default 0.5): that fraction
+            # of balls are decided from the trained checkpoint's own raw
+            # predict_ball() output (wide_prob/wicket_prob/delta); the rest
+            # use the fixed heuristic tables below, same as before. Only
+            # calls predict_ball() on the balls that actually land on the
+            # model path, so the other ~1-MODEL_BLEND_RATE fraction pays
+            # none of its cost. See MODEL_BLEND_RATE's docstring in
+            # model_runner.py for the known instability this reintroduces
+            # (raw wicket_prob/wide_prob drift across an innings; the score
+            # head's delta moves in tiny increments almost every ball, so
+            # model-path balls skew toward 0s/1s).
+            use_model_ball = rng.random() < MODEL_BLEND_RATE
+
+            if use_model_ball:
+                delta, wicket_prob, wide_prob = runner.predict_ball(
                     numerical_sequence,
                     categorical_sequence,
                     score_before=float(innings.score),
                 )
+                is_wide = wide_from_model(wide_prob, runner.wide_thresh)
+            else:
+                is_wide = sample_wide(rng)
 
-            if sample_wide(rng):
+            if is_wide:
                 innings.score += 1
                 current_bowler.runs_conceded += 1
                 # wide: no legal ball consumed, no strike change, bowler continues
                 continue
 
-            striker_position = innings.striker.order_position
+            if use_model_ball:
+                is_wicket = wicket_from_model(
+                    wicket_prob, runner.wicket_thresh, innings.consecutive_wickets
+                )
+            else:
+                is_wicket = sample_wicket(
+                    rng, striker_position, innings.consecutive_wickets
+                )
 
-            if sample_wicket(rng, striker_position, innings.consecutive_wickets):
+            if is_wicket:
                 innings.striker.balls += 1
                 innings.striker.is_out = True
                 innings.striker.dismissal = f"b {bowler_player.name}"
@@ -262,7 +262,11 @@ def _simulate_innings(
                 continue
 
             innings.consecutive_wickets = 0
-            runs = sample_run_outcome(striker_position, rng)
+            runs = (
+                runs_from_delta(delta)
+                if use_model_ball
+                else sample_run_outcome(striker_position, rng)
+            )
             innings.score += runs
             innings.striker.runs += runs
             innings.striker.balls += 1
