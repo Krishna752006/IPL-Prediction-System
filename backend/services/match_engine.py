@@ -45,6 +45,26 @@ from services.squads import Player, Team, get_team
 
 logger = logging.getLogger(__name__)
 
+# PERF FIX (see the predict_ball() call below): the trained model's own
+# forward pass is expensive (a 2-layer Transformer + two LSTMs) and used
+# to run unconditionally on every single ball of the simulation - up to
+# ~300 forward passes for a full two-innings match - even though none of
+# its three outputs (delta/wicket_prob/wide_prob) feed into any outcome
+# decision anymore (see model_runner.py's "Custom ball-outcome shaping"
+# section for why: this checkpoint's raw outputs drift across an innings,
+# so runs/wickets/wides are drawn from the fixed heuristic tables in that
+# file instead). That made every real /predict-1-match request pay the
+# full cost of a computation whose result was thrown away - fine on a
+# fast local CPU, but on a CPU-throttled deploy target (e.g. a
+# fraction-of-a-core hosting plan) that waste is exactly what turns a
+# ~5s local prediction into 60s+ in production.
+#
+# Set this True to restore the old always-on behaviour (e.g. from
+# verify_simulation.py's PERF section, which wants to profile the model's
+# real forward-pass cost) - leave it False for normal /predict-1-match
+# traffic.
+RUN_MODEL_INFERENCE = False
+
 
 def _resolve_toss(team_a: str, team_b: str, rng: random.Random) -> tuple[str, str]:
     winner = rng.choice([team_a, team_b])
@@ -200,9 +220,8 @@ def _simulate_innings(
             numerical_sequence = np.stack(innings.numerical_buffer)
             categorical_sequence = np.stack(innings.categorical_buffer)
 
-            # Still called every ball (so verify_simulation.py's PERF
-            # section keeps profiling the model's real forward-pass cost),
-            # but none of its three return values feed into the outcome
+            # See RUN_MODEL_INFERENCE above: skipped by default because
+            # none of these three return values feed into the outcome
             # decisions below anymore — see model_runner.py's "Custom
             # ball-outcome shaping" section docstring for why: a full run
             # against the actual trained_model checkpoint showed
@@ -210,11 +229,12 @@ def _simulate_innings(
             # holding a stable level, which broke both a fixed threshold
             # and a rolling recalibrated one. `delta` was already unused
             # (the score head has no reliable per-ball resolution).
-            _delta, _wicket_prob, _wide_prob = runner.predict_ball(
-                numerical_sequence,
-                categorical_sequence,
-                score_before=float(innings.score),
-            )
+            if RUN_MODEL_INFERENCE:
+                runner.predict_ball(
+                    numerical_sequence,
+                    categorical_sequence,
+                    score_before=float(innings.score),
+                )
 
             if sample_wide(rng):
                 innings.score += 1

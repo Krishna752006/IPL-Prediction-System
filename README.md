@@ -9,6 +9,7 @@ A full-stack application with a Python backend, ML service, and frontend for IPL
 Install all required Python packages using `uv`:
 
 ```bash
+cd backend
 uv pip install -r requirements.txt
 ```
 
